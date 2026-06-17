@@ -37,7 +37,7 @@ public class UserService {
                         .companyName(us.getStock().getCompanyName())
                         .quantity(us.getQuantity())
                         .averagePrice(us.getAveragePrice())
-                        .currentPrice(us.getStock().getCurrentPrice())
+                        .currentPrice(0L) // 실시간 가격은 프론트엔드가 알아서 렌더링
                         .build())
                 .collect(Collectors.toList());
 

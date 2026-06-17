@@ -1,82 +1,85 @@
 :root {
-    --bg-color: #0f172a;
-    --glass-bg: rgba(30, 41, 59, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --primary: #3b82f6;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --up-color: #ef4444; /* 한국식 상승: 빨강 */
-    --down-color: #3b82f6; /* 한국식 하락: 파랑 */
+    --bg-base: #161a1e;
+    --bg-panel: #1e2329;
+    --bg-hover: #2b3139;
+    --border-color: #2b3139;
+    --text-main: #eaecef;
+    --text-muted: #848e9c;
+    --binance-up: #f6465d; /* 한국형 상승: 빨강 */
+    --binance-down: #2ebd85; /* 한국형 하락: 초록/파랑계열 */
+    --binance-yellow: #fcd535;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
 
-body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; overflow-x: hidden; position: relative; }
+body { background-color: var(--bg-base); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-/* 배경 도형 */
-.background-shapes { position: fixed; width: 100%; height: 100%; z-index: -1; }
-.shape { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.4; animation: float 10s infinite ease-in-out alternate; }
-.shape-1 { width: 500px; height: 500px; background: var(--primary); top: -100px; left: -100px; }
-.shape-2 { width: 400px; height: 400px; background: #8b5cf6; bottom: -50px; right: 5%; animation-delay: -3s; }
-.shape-3 { width: 300px; height: 300px; background: #ec4899; top: 40%; left: 30%; animation-delay: -7s; }
+/* Navbar */
+.navbar { height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; background-color: var(--bg-base); border-bottom: 1px solid var(--border-color); }
+.logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+.user-info { font-size: 14px; color: var(--text-muted); display: flex; align-items: center; gap: 16px; }
+.logout-btn { background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s; font-size: 12px; }
+.logout-btn:hover { background: var(--bg-hover); }
 
-@keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, 50px); } }
+/* Layout Grid */
+.main-container { display: grid; grid-template-columns: 320px 1fr 320px; height: calc(100vh - 60px); }
 
-/* 네비게이션 바 */
-.navbar { display: flex; justify-content: space-between; padding: 20px 40px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border-bottom: 1px solid var(--glass-border); }
-.logo { font-size: 24px; font-weight: 800; }
-.logout-btn { margin-left: 15px; padding: 6px 12px; background: transparent; color: var(--text-main); border: 1px solid var(--glass-border); border-radius: 6px; cursor: pointer; transition: 0.2s; }
-.logout-btn:hover { background: rgba(255, 255, 255, 0.1); }
+/* Panels common */
+.left-panel, .center-panel, .right-panel { border-right: 1px solid var(--border-color); display: flex; flex-direction: column; background-color: var(--bg-base); overflow-y: auto; }
+.right-panel { border-right: none; }
+.panel-header { padding: 12px 16px; font-size: 14px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border-color); background-color: var(--bg-panel); }
 
-/* 컨테이너 */
-.container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+/* Left Panel (Markets) */
+.market-list { flex: 1; overflow-y: auto; }
+.stock-item { display: grid; grid-template-columns: 2fr 1.5fr 1.2fr; padding: 8px 16px; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--border-color); align-items: center; transition: background 0.1s; }
+.stock-item:hover { background-color: var(--bg-hover); }
+.stock-item.active { background-color: var(--bg-panel); border-left: 3px solid var(--binance-yellow); padding-left: 13px; }
+.stock-name-group { display: flex; flex-direction: column; }
+.stock-ticker { font-weight: 600; color: var(--text-main); }
+.stock-name { font-size: 11px; color: var(--text-muted); }
+.stock-price { font-weight: 500; text-align: right; }
+.stock-change { font-size: 12px; text-align: right; }
 
-/* 공통 Glass 패널 */
-.glass-panel { background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
-.glass-panel h2 { font-size: 20px; margin-bottom: 20px; color: #fff; }
+.price-up { color: var(--binance-up); }
+.price-down { color: var(--binance-down); }
+.flash-up { animation: flashUp 0.5s; }
+.flash-down { animation: flashDown 0.5s; }
+@keyframes flashUp { 0% { background-color: rgba(246, 70, 93, 0.2); } 100% { background-color: transparent; } }
+@keyframes flashDown { 0% { background-color: rgba(46, 189, 133, 0.2); } 100% { background-color: transparent; } }
 
-/* 지갑 */
-.wallet-panel { margin-bottom: 30px; text-align: center; }
-.balance { font-size: 40px; font-weight: 800; background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+/* Center Panel (Chart) */
+.chart-header { padding: 16px 24px; display: flex; align-items: baseline; gap: 16px; background-color: var(--bg-panel); border-bottom: 1px solid var(--border-color); }
+.chart-symbol { font-size: 24px; font-weight: 700; }
+.chart-price { font-size: 20px; font-weight: 600; }
+.chart-container { flex: 1; position: relative; }
 
-/* 그리드 */
-.grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+/* Right Panel (Wallet & Order) */
+.wallet-section, .order-section, .holdings-section { border-bottom: 1px solid var(--border-color); }
+.balance { padding: 24px 16px; font-size: 24px; font-weight: 700; color: var(--text-main); text-align: center; }
 
-/* 주식 아이템 */
-.stock-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.2); margin-bottom: 10px; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
-.stock-item:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); }
-.stock-name { font-weight: 600; font-size: 16px; }
-.stock-ticker { font-size: 12px; color: var(--text-muted); }
-.stock-price { font-weight: 800; font-size: 18px; transition: color 0.3s; }
+.order-tabs { display: flex; }
+.order-tab { flex: 1; padding: 12px 0; background: var(--bg-panel); color: var(--text-muted); border: none; border-bottom: 2px solid transparent; font-weight: 600; cursor: pointer; }
+.order-tab.active#tabBuy { color: var(--binance-up); border-bottom-color: var(--binance-up); background: var(--bg-base); }
+.order-tab.active#tabSell { color: var(--binance-down); border-bottom-color: var(--binance-down); background: var(--bg-base); }
 
-/* 등락 색상 */
-.price-up { color: var(--up-color); }
-.price-down { color: var(--down-color); }
-.flash-up { animation: flashRed 1s; }
-.flash-down { animation: flashBlue 1s; }
+.order-form { padding: 20px 16px; }
+.input-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); border-radius: 4px; padding: 8px 12px; margin-bottom: 16px; border: 1px solid var(--border-color); }
+.input-row label { font-size: 12px; color: var(--text-muted); }
+.input-row input { background: transparent; border: none; color: var(--text-main); font-size: 14px; text-align: right; width: 60%; outline: none; }
+.input-row input:disabled { color: var(--text-muted); }
 
-@keyframes flashRed { 0% { background-color: rgba(239, 68, 68, 0.3); } 100% { background-color: transparent; } }
-@keyframes flashBlue { 0% { background-color: rgba(59, 130, 246, 0.3); } 100% { background-color: transparent; } }
+.execute-btn { width: 100%; padding: 14px; border: none; border-radius: 4px; font-size: 16px; font-weight: 600; color: white; cursor: pointer; transition: 0.2s; }
+.execute-btn.buy-btn { background-color: var(--binance-up); }
+.execute-btn.buy-btn:hover { background-color: #d83a4f; }
+.execute-btn.sell-btn { background-color: var(--binance-down); }
+.execute-btn.sell-btn:hover { background-color: #239c6b; }
 
-/* 보유 주식 아이템 */
-.holding-item { padding: 15px; border-radius: 12px; background: rgba(0,0,0,0.2); margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;}
-.holding-header { display: flex; justify-content: space-between; font-weight: 600;}
-.holding-details { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-muted);}
+.message-box { margin-top: 12px; padding: 10px; border-radius: 4px; font-size: 13px; text-align: center; display: none; }
+.message-box.success { background: rgba(14, 203, 129, 0.1); color: #0ecb81; display: block; }
+.message-box.error { background: rgba(246, 70, 93, 0.1); color: var(--binance-up); display: block; }
 
-/* 모달 */
-.modal { display: none; position: fixed; z-index: 10; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
-.modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 350px; }
-.close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-.close:hover { color: #fff; }
-.input-group { margin: 20px 0; }
-.input-group label { display: block; margin-bottom: 8px; }
-.input-group input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: white; }
-.trade-buttons { display: flex; gap: 10px; }
-.primary-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; color: white; }
-.buy-btn { background: #ef4444; }
-.sell-btn { background: #3b82f6; }
-.buy-btn:hover { background: #dc2626; }
-.sell-btn:hover { background: #2563eb; }
-.message-box { margin-top: 15px; padding: 10px; border-radius: 8px; display: none; font-size: 14px; text-align: center; }
-.message-box.success { display: block; background: rgba(16, 185, 129, 0.2); color: #34d399; }
-.message-box.error { display: block; background: rgba(239, 68, 68, 0.2); color: #f87171; }
+/* Holdings */
+.holdings-list { flex: 1; padding: 8px 0; overflow-y: auto; max-height: 250px;}
+.holding-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
+.holding-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.holding-details { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); }

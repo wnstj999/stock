@@ -11,9 +11,11 @@ import com.mock.stock.domain.user.entity.User;
 import com.mock.stock.domain.user.repository.UserRepository;
 import com.mock.stock.domain.wallet.entity.Wallet;
 import com.mock.stock.domain.wallet.repository.WalletRepository;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 
@@ -27,6 +29,26 @@ public class TradeService {
     private final UserStockRepository userStockRepository;
     private final TradeHistoryRepository tradeHistoryRepository;
 
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Data
+    public static class UpbitTicker {
+        private Double trade_price;
+    }
+
+    private Long getCurrentPriceFromUpbit(String ticker) {
+        String url = "https://api.upbit.com/v1/ticker?markets=" + ticker;
+        try {
+            UpbitTicker[] response = restTemplate.getForObject(url, UpbitTicker[].class);
+            if (response != null && response.length > 0) {
+                return response[0].getTrade_price().longValue();
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("업비트 실시간 시세 조회에 실패했습니다.");
+        }
+        throw new IllegalArgumentException("업비트 실시간 시세 조회에 실패했습니다.");
+    }
+
     @Transactional
     public void buyStock(String email, TradeRequest request) {
         User user = userRepository.findByEmail(email)
@@ -37,7 +59,8 @@ public class TradeService {
         Stock stock = stockRepository.findByTicker(request.getTicker())
                 .orElseThrow(() -> new IllegalArgumentException("주식을 찾을 수 없습니다."));
 
-        long totalCost = stock.getCurrentPrice() * request.getQuantity();
+        long currentPrice = getCurrentPriceFromUpbit(request.getTicker());
+        long totalCost = currentPrice * request.getQuantity();
 
         // 1. 예수금 차감
         wallet.deductBalance(new BigDecimal(totalCost));
@@ -45,13 +68,13 @@ public class TradeService {
         // 2. 보유 주식 증가
         UserStock userStock = userStockRepository.findByUserIdAndStockId(userId, stock.getId())
                 .orElse(UserStock.builder().user(user).stock(stock).quantity(0L).averagePrice(0L).build());
-        userStock.addQuantity(request.getQuantity(), stock.getCurrentPrice());
+        userStock.addQuantity(request.getQuantity(), currentPrice);
         userStockRepository.save(userStock);
 
         // 3. 거래 내역 기록
         tradeHistoryRepository.save(TradeHistory.builder()
                 .user(user).stock(stock).tradeType("BUY")
-                .price(stock.getCurrentPrice()).quantity(request.getQuantity())
+                .price(currentPrice).quantity(request.getQuantity())
                 .build());
     }
 
@@ -65,6 +88,8 @@ public class TradeService {
         Stock stock = stockRepository.findByTicker(request.getTicker())
                 .orElseThrow(() -> new IllegalArgumentException("주식을 찾을 수 없습니다."));
 
+        long currentPrice = getCurrentPriceFromUpbit(request.getTicker());
+
         // 1. 보유 주식 차감
         UserStock userStock = userStockRepository.findByUserIdAndStockId(userId, stock.getId())
                 .orElseThrow(() -> new IllegalArgumentException("보유한 주식이 없습니다."));
@@ -75,13 +100,13 @@ public class TradeService {
         }
 
         // 2. 예수금 증가
-        long totalRevenue = stock.getCurrentPrice() * request.getQuantity();
+        long totalRevenue = currentPrice * request.getQuantity();
         wallet.addBalance(new BigDecimal(totalRevenue));
 
         // 3. 거래 내역 기록
         tradeHistoryRepository.save(TradeHistory.builder()
                 .user(user).stock(stock).tradeType("SELL")
-                .price(stock.getCurrentPrice()).quantity(request.getQuantity())
+                .price(currentPrice).quantity(request.getQuantity())
                 .build());
     }
 }
