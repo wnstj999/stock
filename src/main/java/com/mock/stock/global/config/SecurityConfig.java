@@ -34,7 +34,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll() // 로그인, 회원가입은 접근 허용
-                .requestMatchers("/", "/index.html", "/style.css", "/app.js", "/error").permitAll() // 프론트엔드 정적 파일 접근 허용
+                .requestMatchers("/", "/index.html", "/style.css", "/app.js", "/dashboard.html", "/dashboard.js", "/dashboard.css", "/error").permitAll() // 프론트엔드 정적 파일 접근 허용
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

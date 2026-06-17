@@ -30,4 +30,15 @@ public class Wallet {
         this.user = user;
         this.balance = balance;
     }
+
+    public void addBalance(BigDecimal amount) {
+        this.balance = this.balance.add(amount);
+    }
+
+    public void deductBalance(BigDecimal amount) {
+        if (this.balance.compareTo(amount) < 0) {
+            throw new IllegalArgumentException("예수금이 부족합니다.");
+        }
+        this.balance = this.balance.subtract(amount);
+    }
 }

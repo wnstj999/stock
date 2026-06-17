@@ -75,6 +75,9 @@ async function handleLogin(e) {
             // 브라우저의 localStorage에 JWT 토큰을 안전하게 저장합니다!
             localStorage.setItem('accessToken', data.accessToken);
             showMessage('🎉 로그인 성공! (JWT 토큰 발급 완료)', 'success');
+            setTimeout(() => {
+                window.location.href = '/dashboard.html';
+            }, 1000);
         } else {
             showMessage('이메일이나 비밀번호가 틀렸습니다.', 'error');
         }
