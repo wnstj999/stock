@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/stock_mock?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: 1234 # Docker MySQL 비밀번호
+
+  jpa:
+    hibernate:
+      # 서버 시작 시 엔티티(Entity) 클래스에 맞춰 테이블을 자동으로 생성/수정해줍니다.
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        # N+1 문제 최적화를 위한 기초 설정
+        default_batch_fetch_size: 100
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.type.descriptor.sql.BasicBinder: trace
+
+jwt:
+  secret: aW1hZ2luZS10aGlzLWlzLWEtdmVyeS1zZWN1cmUtYW5kLWxvbmctc2VjcmV0LWtleS1mb3ItbW9jay1zdG9jay1wcm9qZWN0
+  token-validity-in-seconds: 86400
