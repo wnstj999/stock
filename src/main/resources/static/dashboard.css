@@ -1,85 +1,579 @@
 :root {
-    --bg-base: #161a1e;
+    --bg-base: #0b0e11;
     --bg-panel: #1e2329;
     --bg-hover: #2b3139;
     --border-color: #2b3139;
     --text-main: #eaecef;
     --text-muted: #848e9c;
-    --binance-up: #f6465d; /* 한국형 상승: 빨강 */
-    --binance-down: #2ebd85; /* 한국형 하락: 초록/파랑계열 */
-    --binance-yellow: #fcd535;
+    --binance-up: #0ecb81; /* 바이낸스 상승: 초록 */
+    --binance-down: #f6465d; /* 바이낸스 하락: 빨강 */
+    --binance-yellow: #fcd535; /* 바이낸스 옐로우 */
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+    font-family: 'Inter', -apple-system, sans-serif; 
+}
 
-body { background-color: var(--bg-base); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+/* Material Switch styling for Binance */
+md-switch {
+    --md-switch-selected-handle-color: #000;
+    --md-switch-selected-track-color: var(--binance-yellow);
+    --md-switch-unselected-handle-color: var(--text-muted);
+    --md-switch-unselected-track-color: var(--bg-hover);
+    --md-switch-selected-icon-color: #000;
+    --md-switch-unselected-icon-color: var(--text-muted);
+    transform: scale(0.8);
+}
+
+body { 
+    background-color: var(--bg-base); 
+    color: var(--text-main); 
+    height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+}
 
 /* Navbar */
-.navbar { height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; background-color: var(--bg-base); border-bottom: 1px solid var(--border-color); }
-.logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
-.user-info { font-size: 14px; color: var(--text-muted); display: flex; align-items: center; gap: 16px; }
-.logout-btn { background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s; font-size: 12px; }
-.logout-btn:hover { background: var(--bg-hover); }
+.navbar { 
+    height: 50px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 0 20px; 
+    background-color: var(--bg-panel); 
+    border-bottom: 1px solid var(--border-color); 
+}
+.logo { 
+    font-size: 18px; 
+    font-weight: 700; 
+    letter-spacing: -0.5px; 
+}
+.user-info { 
+    font-size: 13px; 
+    color: var(--text-muted); 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+}
+.logout-btn { 
+    background: var(--bg-hover); 
+    color: var(--text-main); 
+    border: 1px solid var(--border-color); 
+    padding: 4px 10px; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    font-size: 11px; 
+}
+.logout-btn:hover { 
+    background: #3b434c; 
+}
 
-/* Layout Grid */
-.main-container { display: grid; grid-template-columns: 320px 1fr 320px; height: calc(100vh - 60px); }
+/* Layout Grid: 3 Columns (Order Book, Center: Chart/Assets, Right: Markets/Orders) */
+.main-container { 
+    display: grid; 
+    grid-template-columns: 280px 1fr 320px; 
+    height: calc(100vh - 50px); 
+}
 
-/* Panels common */
-.left-panel, .center-panel, .right-panel { border-right: 1px solid var(--border-color); display: flex; flex-direction: column; background-color: var(--bg-base); overflow-y: auto; }
-.right-panel { border-right: none; }
-.panel-header { padding: 12px 16px; font-size: 14px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border-color); background-color: var(--bg-panel); }
+/* Panels Common */
+.orderbook-panel, .center-panel, .right-panel { 
+    border-right: 1px solid var(--border-color); 
+    display: flex; 
+    flex-direction: column; 
+    background-color: var(--bg-base); 
+    overflow: hidden; 
+}
+.right-panel { 
+    border-right: none; 
+}
+.panel-header { 
+    padding: 10px 16px; 
+    font-size: 13px; 
+    font-weight: 600; 
+    color: var(--text-muted); 
+    border-bottom: 1px solid var(--border-color); 
+    background-color: var(--bg-panel); 
+    display: flex; 
+    justify-content: space-between;
+    align-items: center;
+}
 
-/* Left Panel (Markets) */
-.market-list { flex: 1; overflow-y: auto; }
-.stock-item { display: grid; grid-template-columns: 2fr 1.5fr 1.2fr; padding: 8px 16px; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--border-color); align-items: center; transition: background 0.1s; }
-.stock-item:hover { background-color: var(--bg-hover); }
-.stock-item.active { background-color: var(--bg-panel); border-left: 3px solid var(--binance-yellow); padding-left: 13px; }
+/* Order Book Panel */
+.orderbook-container { 
+    flex: 1; 
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column; 
+    font-size: 12px; 
+    font-variant-numeric: tabular-nums; 
+}
+.orderbook-sell { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column-reverse; 
+    overflow-y: hidden;
+}
+.orderbook-buy { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    overflow-y: hidden;
+}
+.orderbook-mid-price {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-panel);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 700;
+}
+.mid-change {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.ob-row { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    padding: 3px 16px; 
+    cursor: pointer; 
+    position: relative; 
+    align-items: center;
+}
+.ob-row:hover { 
+    background-color: var(--bg-hover); 
+}
+.ob-price { 
+    font-weight: 600; 
+    z-index: 1; 
+}
+.ob-size { 
+    text-align: right; 
+    color: var(--text-main); 
+    z-index: 1; 
+}
+.ob-bg { 
+    position: absolute; 
+    right: 0; 
+    top: 0; 
+    height: 100%; 
+    opacity: 0.12; 
+    z-index: 0; 
+    transition: width 0.2s ease;
+}
+.ob-sell-price { color: var(--binance-down); }
+.ob-buy-price { color: var(--binance-up); }
+.ob-sell-bg { background-color: var(--binance-down); }
+.ob-buy-bg { background-color: var(--binance-up); }
+
+/* Center Panel (Chart & Assets) */
+.chart-header { 
+    padding: 10px 20px; 
+    display: flex; 
+    justify-content: space-between;
+    align-items: center; 
+    background-color: var(--bg-panel); 
+    border-bottom: 1px solid var(--border-color); 
+}
+.chart-info-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+.chart-info-right {
+    display: flex;
+    gap: 20px;
+}
+.chart-symbol { 
+    font-size: 18px; 
+    font-weight: 700; 
+}
+.chart-price { 
+    font-size: 28px; 
+    font-weight: 700; 
+    letter-spacing: -0.5px;
+    transition: all 0.2s ease;
+}
+.chart-price.price-up {
+    color: var(--binance-up);
+    text-shadow: 0 0 12px rgba(14, 203, 129, 0.3);
+}
+.chart-price.price-down {
+    color: var(--binance-down);
+    text-shadow: 0 0 12px rgba(246, 70, 93, 0.3);
+}
+.stat-box {
+    display: flex;
+    flex-direction: column;
+}
+.stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+.stat-value {
+    font-size: 12px;
+    font-weight: 600;
+}
+.chart-container { 
+    flex: 1; 
+    position: relative; 
+}
+
+/* Holdings Table Section */
+.holdings-section {
+    border-top: 1px solid var(--border-color);
+    height: 240px;
+    display: flex;
+    flex-direction: column;
+}
+.holdings-table-container {
+    flex: 1;
+    overflow-y: auto;
+}
+.holdings-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 12px;
+}
+.holdings-table th, .holdings-table td {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+.holdings-table th {
+    color: var(--text-muted);
+    font-weight: 500;
+    background-color: var(--bg-base);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.holdings-table tbody tr:hover {
+    background-color: var(--bg-hover);
+}
+
+/* Right Panel Elements */
+.market-section {
+    border-bottom: 1px solid var(--border-color);
+    height: 220px;
+    display: flex;
+    flex-direction: column;
+}
+.market-search-container {
+    padding: 6px 12px;
+    background-color: var(--bg-base);
+    border-bottom: 1px solid var(--border-color);
+}
+.market-search-container input {
+    width: 100%;
+    padding: 6px 10px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-main);
+    font-size: 11px;
+    outline: none;
+}
+.market-search-container input:focus {
+    border-color: var(--binance-yellow);
+}
+.market-list {
+    flex: 1;
+    overflow-y: auto;
+}
+.stock-item { 
+    display: grid; 
+    grid-template-columns: 2fr 1.5fr 1.2fr; 
+    padding: 6px 16px; 
+    font-size: 12px; 
+    cursor: pointer; 
+    border-bottom: 1px solid var(--border-color); 
+    align-items: center; 
+    transition: background 0.1s; 
+}
+.stock-item:hover { 
+    background-color: var(--bg-hover); 
+}
+.stock-item.active { 
+    background-color: var(--bg-panel); 
+    border-left: 3px solid var(--binance-yellow); 
+    padding-left: 13px; 
+}
 .stock-name-group { display: flex; flex-direction: column; }
 .stock-ticker { font-weight: 600; color: var(--text-main); }
-.stock-name { font-size: 11px; color: var(--text-muted); }
+.stock-name { font-size: 10px; color: var(--text-muted); }
 .stock-price { font-weight: 500; text-align: right; }
-.stock-change { font-size: 12px; text-align: right; }
+.stock-change { font-size: 11px; text-align: right; }
 
 .price-up { color: var(--binance-up); }
 .price-down { color: var(--binance-down); }
 .flash-up { animation: flashUp 0.5s; }
 .flash-down { animation: flashDown 0.5s; }
-@keyframes flashUp { 0% { background-color: rgba(246, 70, 93, 0.2); } 100% { background-color: transparent; } }
-@keyframes flashDown { 0% { background-color: rgba(46, 189, 133, 0.2); } 100% { background-color: transparent; } }
+@keyframes flashUp { 0% { background-color: rgba(246, 70, 93, 0.18); } 100% { background-color: transparent; } }
+@keyframes flashDown { 0% { background-color: rgba(46, 189, 133, 0.18); } 100% { background-color: transparent; } }
 
-/* Center Panel (Chart) */
-.chart-header { padding: 16px 24px; display: flex; align-items: baseline; gap: 16px; background-color: var(--bg-panel); border-bottom: 1px solid var(--border-color); }
-.chart-symbol { font-size: 24px; font-weight: 700; }
-.chart-price { font-size: 20px; font-weight: 600; }
-.chart-container { flex: 1; position: relative; }
-
-/* Right Panel (Wallet & Order) */
-.wallet-section, .order-section, .holdings-section { border-bottom: 1px solid var(--border-color); }
-.balance { padding: 24px 16px; font-size: 24px; font-weight: 700; color: var(--text-main); text-align: center; }
-
+/* Order Form Section */
+.order-section { 
+    border-bottom: 1px solid var(--border-color); 
+    padding-bottom: 12px;
+}
 .order-tabs { display: flex; }
-.order-tab { flex: 1; padding: 12px 0; background: var(--bg-panel); color: var(--text-muted); border: none; border-bottom: 2px solid transparent; font-weight: 600; cursor: pointer; }
+.order-tab { 
+    flex: 1; 
+    padding: 10px 0; 
+    background: var(--bg-panel); 
+    color: var(--text-muted); 
+    border: none; 
+    border-bottom: 2px solid transparent; 
+    font-weight: 600; 
+    cursor: pointer; 
+    font-size: 12px;
+}
 .order-tab.active#tabBuy { color: var(--binance-up); border-bottom-color: var(--binance-up); background: var(--bg-base); }
 .order-tab.active#tabSell { color: var(--binance-down); border-bottom-color: var(--binance-down); background: var(--bg-base); }
 
-.order-form { padding: 20px 16px; }
-.input-row { display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); border-radius: 4px; padding: 8px 12px; margin-bottom: 16px; border: 1px solid var(--border-color); }
-.input-row label { font-size: 12px; color: var(--text-muted); }
-.input-row input { background: transparent; border: none; color: var(--text-main); font-size: 14px; text-align: right; width: 60%; outline: none; }
+.order-form { padding: 12px 16px; }
+.input-row { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    background: var(--bg-panel); 
+    border-radius: 4px; 
+    padding: 6px 10px; 
+    margin-bottom: 8px; 
+    border: 1px solid var(--border-color); 
+}
+.input-row label { font-size: 11px; color: var(--text-muted); }
+.input-row input { background: transparent; border: none; color: var(--text-main); font-size: 13px; text-align: right; width: 60%; outline: none; }
 .input-row input:disabled { color: var(--text-muted); }
 
-.execute-btn { width: 100%; padding: 14px; border: none; border-radius: 4px; font-size: 16px; font-weight: 600; color: white; cursor: pointer; transition: 0.2s; }
+/* 25%, 50%, 75%, 100% Ratio Selection */
+.ratio-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+.ratio-btn {
+    flex: 1;
+    background-color: var(--bg-panel);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    padding: 4px 0;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ratio-btn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-main);
+}
+.ratio-btn.active {
+    background-color: var(--binance-yellow);
+    color: #000;
+    border-color: var(--binance-yellow);
+}
+
+.execute-btn { 
+    width: 100%; 
+    padding: 10px; 
+    border: none; 
+    border-radius: 4px; 
+    font-size: 14px; 
+    font-weight: 600; 
+    color: white; 
+    cursor: pointer; 
+    transition: 0.2s; 
+}
 .execute-btn.buy-btn { background-color: var(--binance-up); }
-.execute-btn.buy-btn:hover { background-color: #d83a4f; }
+.execute-btn.buy-btn:hover { background-color: #0baf6f; }
 .execute-btn.sell-btn { background-color: var(--binance-down); }
-.execute-btn.sell-btn:hover { background-color: #239c6b; }
+.execute-btn.sell-btn:hover { background-color: #d83a4f; }
 
-.message-box { margin-top: 12px; padding: 10px; border-radius: 4px; font-size: 13px; text-align: center; display: none; }
-.message-box.success { background: rgba(14, 203, 129, 0.1); color: #0ecb81; display: block; }
-.message-box.error { background: rgba(246, 70, 93, 0.1); color: var(--binance-up); display: block; }
+.message-box { margin-top: 8px; padding: 6px; border-radius: 4px; font-size: 11px; text-align: center; display: none; }
+.message-box.success { background: rgba(14, 203, 129, 0.15); color: #0ecb81; display: block; }
+.message-box.error { background: rgba(246, 70, 93, 0.15); color: #f6465d; display: block; }
 
-/* Holdings */
-.holdings-list { flex: 1; padding: 8px 0; overflow-y: auto; max-height: 250px;}
-.holding-item { padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
-.holding-header { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-.holding-details { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); }
+/* AI Agent Panel */
+.ai-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 16px;
+    background-color: var(--bg-base);
+    overflow: hidden;
+}
+.ai-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+.ai-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pulsing-indicator {
+    width: 6px;
+    height: 6px;
+    background-color: var(--text-muted);
+    border-radius: 50%;
+    display: inline-block;
+    transition: background-color 0.3s;
+}
+.pulsing-indicator.active {
+    background-color: #0ecb81;
+    box-shadow: 0 0 0 0 rgba(14, 203, 129, 0.5);
+    animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(14, 203, 129, 0.6); }
+    70% { box-shadow: 0 0 0 5px rgba(14, 203, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(14, 203, 129, 0); }
+}
+.ai-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--binance-yellow);
+}
+.ai-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+}
+.ai-predict-btn {
+    background-color: var(--binance-yellow);
+    color: #0b0e11;
+    border: none;
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+}
+.ai-predict-btn:hover {
+    background-color: #f0c822;
+}
+.ai-result-box {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ai-prediction-row {
+    display: flex;
+    align-items: baseline;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+.ai-reason {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-main);
+    word-break: keep-all;
+}
+.ai-disclaimer {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    padding: 4px;
+    margin-top: auto;
+}
+
+/* 주문 영역 매수/매도 감응 광채 테두리 */
+.order-section {
+    border: 1.5px solid transparent;
+    border-radius: 8px;
+    padding-bottom: 12px;
+    transition: all 0.25s ease;
+}
+.order-section.buy-active {
+    border-color: rgba(14, 203, 129, 0.35);
+    box-shadow: 0 0 12px rgba(14, 203, 129, 0.08);
+}
+.order-section.sell-active {
+    border-color: rgba(246, 70, 93, 0.35);
+    box-shadow: 0 0 12px rgba(246, 70, 93, 0.08);
+}
+
+/* 예상 결제 금액 스타일 */
+.expected-total-container {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    margin-bottom: 8px;
+}
+#expectedTotal {
+    font-weight: 600;
+    color: var(--text-main);
+}
+#expectedTotal.warning {
+    color: var(--binance-down) !important;
+    animation: blink 0.8s infinite;
+}
+@keyframes blink {
+    50% { opacity: 0.5; }
+}
+
+/* 체결 완료 영수증 카드 스타일 */
+.receipt-card {
+    background-color: var(--bg-panel);
+    border: 1px dashed var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 12px;
+    font-size: 11px;
+    animation: slideUp 0.3s ease-out;
+}
+@keyframes slideUp {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.receipt-title {
+    font-weight: 700;
+    text-align: center;
+    color: var(--binance-yellow);
+    margin-bottom: 8px;
+}
+.receipt-divider {
+    border-top: 1px dashed var(--border-color);
+    margin: 6px 0;
+}
+.receipt-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+    color: var(--text-muted);
+}
+.receipt-value {
+    color: var(--text-main);
+    font-weight: 500;
+}
+.font-highlight {
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-main);
+}

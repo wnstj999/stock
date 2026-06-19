@@ -25,6 +25,12 @@ public class TradeController {
     public ResponseEntity<String> sellStock(Authentication authentication, @RequestBody TradeRequest request) {
         String email = authentication.getName();
         tradeService.sellStock(email, request);
-        return ResponseEntity.ok("매도가 완료되었습니다.");
+        return ResponseEntity.ok("매도 성공");
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<java.util.List<com.mock.stock.domain.trade.dto.TradeHistoryResponse>> getMyTradeHistory(Authentication authentication) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(tradeService.getMyTradeHistory(email));
     }
 }

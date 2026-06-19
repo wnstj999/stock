@@ -30,8 +30,9 @@ public class Stock extends BaseTimeEntity {
     @Column(nullable = false)
     private Long previousClose; // 전일 종가 (등락률 계산용)
 
-    // 가격 변동을 위한 도메인 로직
-    public void updatePrice(Long newPrice) {
+    // 가격 및 전일 종가 변동을 위한 도메인 로직
+    public void updatePrice(Long newPrice, Long newPrevClose) {
         this.currentPrice = newPrice;
+        this.previousClose = newPrevClose;
     }
 }

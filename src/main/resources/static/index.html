@@ -6,6 +6,9 @@
     <title>MockStock - 가상 자산 모의투자</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Google Material Design 3 Web Components -->
+    <script type="module" src="https://esm.run/@material/web/all.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 </head>
 <body>
     <div class="background-shapes">
@@ -27,31 +30,26 @@
             <!-- 로그인 폼 -->
             <form id="loginForm" class="form-section active" onsubmit="handleLogin(event)">
                 <div class="input-group">
-                    <label>이메일</label>
-                    <input type="email" id="loginEmail" required placeholder="example@test.com">
+                    <md-outlined-text-field label="이메일" type="email" id="loginEmail" required placeholder="example@test.com"></md-outlined-text-field>
                 </div>
                 <div class="input-group">
-                    <label>비밀번호</label>
-                    <input type="password" id="loginPassword" required placeholder="비밀번호를 입력하세요">
+                    <md-outlined-text-field label="비밀번호" type="password" id="loginPassword" required placeholder="비밀번호를 입력하세요"></md-outlined-text-field>
                 </div>
-                <button type="submit" class="primary-btn">로그인하기</button>
+                <md-filled-button type="submit" class="primary-btn">로그인하기</md-filled-button>
             </form>
 
             <!-- 회원가입 폼 -->
             <form id="signupForm" class="form-section" onsubmit="handleSignup(event)">
                 <div class="input-group">
-                    <label>이메일</label>
-                    <input type="email" id="signupEmail" required placeholder="example@test.com">
+                    <md-outlined-text-field label="이메일" type="email" id="signupEmail" required placeholder="example@test.com"></md-outlined-text-field>
                 </div>
                 <div class="input-group">
-                    <label>비밀번호</label>
-                    <input type="password" id="signupPassword" required placeholder="안전한 비밀번호">
+                    <md-outlined-text-field label="비밀번호" type="password" id="signupPassword" required placeholder="안전한 비밀번호"></md-outlined-text-field>
                 </div>
                 <div class="input-group">
-                    <label>닉네임</label>
-                    <input type="text" id="signupNickname" required placeholder="ex) 워런버핏">
+                    <md-outlined-text-field label="닉네임" type="text" id="signupNickname" required placeholder="ex) 워런버핏"></md-outlined-text-field>
                 </div>
-                <button type="submit" class="primary-btn">가입하고 1,000만원 받기</button>
+                <md-filled-button type="submit" class="primary-btn">가입하고 1,000만원 받기</md-filled-button>
             </form>
 
             <div id="messageBox" class="message-box"></div>

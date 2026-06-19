@@ -16,6 +16,9 @@ spring:
         # N+1 문제 최적화를 위한 기초 설정
         default_batch_fetch_size: 100
 
+openai:
+  api-key: YOUR_OPENAI_API_KEY_HERE
+
 logging:
   level:
     org.hibernate.SQL: debug

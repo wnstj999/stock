@@ -6,70 +6,235 @@
     <title>MockStock - Binance Style</title>
     <link rel="stylesheet" href="dashboard.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- TradingView Lightweight Charts v4.2.0 강제 고정 (v5 버그 해결) -->
-    <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- 트레이딩뷰 종합 위젯 라이브러리 로드 -->
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <!-- Google Material Design 3 Web Components -->
+    <script type="module" src="https://esm.run/@material/web/all.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo">MockStock<span style="color: #fcd535;">Crypto</span></div>
+        <div class="logo">모의투자<span style="color: #fcd535;">크립토</span></div>
         <div class="user-info">
             <span id="userNickname">로딩중...</span>
-            <button onclick="logout()" class="logout-btn">Log Out</button>
+        </div>
+        <div class="nav-right" style="display: flex; gap: 8px;">
+            <button class="nav-btn" onclick="showHistoryModal()">📜 내 거래내역</button>
+            <button class="nav-btn" onclick="showRankingModal()">🏆 명예의 전당</button>
+            <button class="logout-btn" onclick="logout()">로그아웃</button>
         </div>
     </nav>
 
     <div class="main-container">
-        <!-- 좌측: 마켓 리스트 -->
-        <aside class="left-panel">
-            <div class="panel-header">Markets</div>
-            <div class="market-list" id="stockList">
-                <!-- JS로 렌더링 -->
+        <!-- 좌측: 호가창 (Orderbook) -->
+        <aside class="orderbook-panel">
+            <div class="panel-header">호가창</div>
+            <div class="orderbook-container">
+                <!-- 매도 호가 (파란색) -->
+                <div class="orderbook-sell" id="orderbookSell"></div>
+                <!-- 중간 현재가 표시 영역 (바이낸스 스타일) -->
+                <div class="orderbook-mid-price" id="orderbookMidPrice">
+                    <span id="midPriceText">0</span>
+                    <span id="midPriceChange" class="mid-change">0%</span>
+                </div>
+                <!-- 매수 호가 (빨간색) -->
+                <div class="orderbook-buy" id="orderbookBuy"></div>
             </div>
         </aside>
 
-        <!-- 중앙: 차트 -->
+        <!-- 중앙: 차트 & 자산 현황 -->
         <main class="center-panel">
+            <!-- 차트 헤더 -->
             <div class="chart-header">
-                <div id="chartTitle" class="chart-symbol">BTC/KRW</div>
-                <div id="chartPrice" class="chart-price">0</div>
+                <div class="chart-info-left">
+                    <div id="chartTitle" class="chart-symbol">BTC/KRW</div>
+                    <div id="chartPrice" class="chart-price">0</div>
+                </div>
+                <div class="chart-info-right">
+                    <div class="stat-box">
+                        <span class="stat-label">24h High</span>
+                        <span id="tickerHigh" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">24h Low</span>
+                        <span id="tickerLow" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">24h Vol</span>
+                        <span id="tickerVol" class="stat-value">0</span>
+                    </div>
+                </div>
             </div>
+            
+            <!-- 차트 영역 -->
             <div id="tvchart" class="chart-container"></div>
+            
+            <!-- 보유 자산 현황 테이블 (바이낸스 스타일로 리뉴얼) -->
+            <div class="holdings-section">
+                <div class="panel-header">
+                    <span>나의 보유 자산</span>
+                    <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">예수금: <strong id="walletBalance" style="color:var(--text-main);">0 KRW</strong></span>
+                </div>
+                <div class="holdings-table-container">
+                    <table class="holdings-table">
+                        <thead>
+                            <tr>
+                                <th>보유코인</th>
+                                <th>보유수량</th>
+                                <th>평균매수가</th>
+                                <th>현재가</th>
+                                <th>평가손익</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holdingsList">
+                            <!-- JS로 렌더링 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </main>
 
-        <!-- 우측: 지갑 & 주문 -->
+        <!-- 우측: 마켓 리스트, 주문 창, AI 에이전트 -->
         <aside class="right-panel">
-            <div class="wallet-section">
-                <div class="panel-header">My Wallet</div>
-                <div class="balance" id="walletBalance">0 KRW</div>
-            </div>
-
-            <div class="order-section">
-                <div class="panel-header">Order Form</div>
-                <div class="order-tabs">
-                    <button class="order-tab active" id="tabBuy" onclick="switchOrderTab('buy')">Buy</button>
-                    <button class="order-tab" id="tabSell" onclick="switchOrderTab('sell')">Sell</button>
+            <!-- 마켓 리스트 -->
+            <div class="market-section">
+                <div class="panel-header">마켓 목록</div>
+                <div class="market-search-container">
+                    <input type="text" id="marketSearch" placeholder="코인명 또는 심볼 검색 (예: BTC)" oninput="filterMarkets()">
                 </div>
-                <div class="order-form">
-                    <div class="input-row">
-                        <label>Price</label>
-                        <input type="text" id="orderPrice" disabled value="Market Price">
-                    </div>
-                    <div class="input-row">
-                        <label>Amount</label>
-                        <input type="number" id="tradeQuantity" min="1" value="1">
-                    </div>
-                    <button id="executeBtn" class="execute-btn buy-btn" onclick="executeTrade()">Buy <span id="orderTargetCoin">BTC</span></button>
-                    <div id="orderMessage" class="message-box"></div>
-                </div>
-            </div>
-
-            <div class="holdings-section">
-                <div class="panel-header">My Assets</div>
-                <div class="holdings-list" id="holdingsList">
+                <div class="market-list" id="stockList">
                     <!-- JS로 렌더링 -->
                 </div>
             </div>
+
+            <!-- 주문 폼 -->
+            <div class="order-section">
+                <div class="panel-header">주문 입력</div>
+                <div class="order-tabs">
+                    <button class="order-tab active" id="tabBuy" onclick="switchOrderTab('buy')">매수</button>
+                    <button class="order-tab" id="tabSell" onclick="switchOrderTab('sell')">매도</button>
+                </div>
+                <div class="order-form">
+                    <div class="input-row">
+                        <label>주문구분</label>
+                        <input type="text" id="orderPrice" disabled value="시장가">
+                    </div>
+                    <div class="input-row">
+                        <label>주문수량</label>
+                        <input type="number" id="tradeQuantity" min="0.0001" step="0.0001" value="1" oninput="updateExpectedTotal()">
+                    </div>
+                    
+                    <!-- 예상 결제 금액 영역 -->
+                    <div class="expected-total-container">
+                        <span>예상 결제 금액</span>
+                        <span id="expectedTotal">0 KRW</span>
+                    </div>
+                    
+                    <!-- 25%, 50%, 75%, 100% 비율 선택 버튼 추가 -->
+                    <div class="ratio-buttons">
+                        <button type="button" class="ratio-btn" onclick="selectRatio(0.25)">25%</button>
+                        <button type="button" class="ratio-btn" onclick="selectRatio(0.50)">50%</button>
+                        <button type="button" class="ratio-btn" onclick="selectRatio(0.75)">75%</button>
+                        <button type="button" class="ratio-btn" onclick="selectRatio(1.00)">100%</button>
+                    </div>
+
+                    <button id="executeBtn" class="execute-btn buy-btn" onclick="executeTrade()">매수 <span id="orderTargetCoin">BTC</span></button>
+                    <div id="orderMessage" class="message-box"></div>
+                    
+                    <!-- 영수증 피드백 카드 -->
+                    <div id="receiptCard" class="receipt-card" style="display: none;">
+                        <div class="receipt-title">🧾 체결 완료 영수증</div>
+                        <div class="receipt-divider"></div>
+                        <div class="receipt-row">
+                            <span>구분</span>
+                            <span id="receiptType" class="receipt-value" style="font-weight:700;">-</span>
+                        </div>
+                        <div class="receipt-row">
+                            <span>체결단가</span>
+                            <span id="receiptPrice" class="receipt-value">0 KRW</span>
+                        </div>
+                        <div class="receipt-row">
+                            <span>체결수량</span>
+                            <span id="receiptQty" class="receipt-value">0 BTC</span>
+                        </div>
+                        <div class="receipt-divider"></div>
+                        <div class="receipt-row font-highlight">
+                            <span>총 결제액</span>
+                            <span id="receiptTotal">0 KRW</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI 에이전트 패널 -->
+            <div class="ai-section">
+                <div class="ai-header">
+                    <div class="ai-title-group">
+                        <span class="ai-title">🤖 AI 시장 분석 (OpenAI 연동)</span>
+                    </div>
+                </div>
+                <div class="ai-content">
+                    <button id="aiPredictBtn" class="ai-predict-btn" onclick="analyzeWithAI()">🔍 현재 시장 분석하기</button>
+                    <div id="aiResultBox" class="ai-result-box" style="display:none;">
+                        <div class="ai-prediction-row">
+                            <span style="color: var(--text-muted);">예측 방향: </span>
+                            <strong id="aiDirection" style="font-size: 16px;">-</strong>
+                            <span id="aiConfidence" style="margin-left: 8px; font-size: 12px; color: var(--text-muted);">(-)</span>
+                        </div>
+                        <div class="ai-reason" id="aiReason">분석 내용이 여기에 표시됩니다.</div>
+                    </div>
+                    <div class="ai-disclaimer">
+                        ⚠️ AI 분석 결과는 100% 신뢰할 수 없습니다. 가상화폐 시장은 변동성이 크므로 참고용으로만 활용하시고 투자에 유의하시기 바랍니다.
+                    </div>
+                </div>
+            </div>
         </aside>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>📜 내 거래내역</h2>
+                <span class="close" onclick="closeHistoryModal()">&times;</span>
+            </div>
+            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted);">
+                            <th style="padding: 8px;">시간</th>
+                            <th style="padding: 8px;">코인명</th>
+                            <th style="padding: 8px;">종류</th>
+                            <th style="padding: 8px; text-align: right;">단가</th>
+                            <th style="padding: 8px; text-align: right;">수량</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyList"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranking Modal -->
+    <div id="rankingModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>🏆 명예의 전당 (Top 10)</h2>
+                <span class="close" onclick="closeRankingModal()">&times;</span>
+            </div>
+            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted);">
+                            <th style="padding: 8px; width: 50px;">순위</th>
+                            <th style="padding: 8px;">닉네임</th>
+                            <th style="padding: 8px; text-align: right;">총 자산(KRW)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingList"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script src="dashboard.js"></script>
