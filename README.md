@@ -1,6 +1,8 @@
 # stock
 6/18 5:54 
 <img width="1920" height="954" alt="image" src="https://github.com/user-attachments/assets/7d5a683d-29da-45ec-8478-258a2520ec27" />
+6/19 19:02
+![alt text](image.png)
 
 1. 차트뷰 심화
 2. 종목 선택 가능
