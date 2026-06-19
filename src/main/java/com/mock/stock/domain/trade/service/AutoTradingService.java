@@ -64,13 +64,27 @@ public class AutoTradingService {
 
             // 2. OpenAI에 프롬프트 전송하여 분석 사유(Reason) 생성
             String prompt = String.format(
-                "당신은 가상화폐 시장을 분석하는 최고의 수석 애널리스트입니다. 머신러닝 모델이 %s 종목에 대해 다음과 같은 예측을 내놓았습니다.\n" +
+                "당신은 가상화폐 선물시장을 분석하는 최고의 마진/선물 수석 애널리스트입니다. 머신러닝 모델이 %s 종목에 대해 다음과 같은 예측을 내놓았습니다.\n" +
                 "- ML 예측 방향: %s\n" +
                 "- 예측 신뢰도(확률): %.2f%%\n" +
                 "- 현재 가격: %.2f KRW\n\n" +
-                "이 데이터와 당신의 최근 시장 지식을 결합하여, 유저에게 도움이 될 만한 2~3문장 길이의 명쾌하고 전문적인 분석 코멘트(한국어)를 작성해주세요.\n" +
-                "반드시 JSON 형식으로 응답하세요: {\"reason\": \"<분석 코멘트>\"}",
-                ticker, prediction, confidence, currentPrice
+                "이 데이터와 당신의 최근 시장 지식을 결합하여, 유저에게 다음과 같은 구체적인 마진/선물 매매 지침을 내려주세요.\n" +
+                "1. action: 'STRONG_LONG', 'LONG', 'HOLD', 'SHORT', 'STRONG_SHORT' 중 하나를 선택하세요.\n" +
+                "   (포지션이 없더라도 숏 포지션 진입을 고려할 수 있습니다. 숏 진입 시에는 가격이 하락하면 수익을 얻습니다.)\n" +
+                "2. target_price: 이 포지션(롱 또는 숏)에 진입했을 때 얼마에 익절(Take Profit)해야 할지 목표가(KRW)를 정수로 적어주세요.\n" +
+                "   - 롱 포지션(LONG, STRONG_LONG)인 경우: 반드시 현재가(%.2f)보다 높은 가격이어야 합니다. (예: 현재가 대비 +2%% ~ +10%% 사이)\n" +
+                "   - 숏 포지션(SHORT, STRONG_SHORT)인 경우: 반드시 현재가(%.2f)보다 낮은 가격이어야 합니다. (예: 현재가 대비 -2%% ~ -10%% 사이)\n" +
+                "   - HOLD인 경우 0\n" +
+                "3. stop_loss: 이 포지션에 진입했을 때 얼마에 손절(Stop Loss)해야 할지 손절가(KRW)를 정수로 적어주세요.\n" +
+                "   - 롱 포지션(LONG, STRONG_LONG)인 경우: 반드시 현재가(%.2f)보다 낮은 가격이어야 합니다. (예: 현재가 대비 -1%% ~ -5%% 사이)\n" +
+                "   - 숏 포지션(SHORT, STRONG_SHORT)인 경우: 반드시 현재가(%.2f)보다 높은 가격이어야 합니다. (예: 현재가 대비 +1%% ~ +5%% 사이)\n" +
+                "   - HOLD인 경우 0\n" +
+                "   [수학적 정합성 규칙]: 절대로 롱 예측 시 현재가보다 낮은 목표가를 주거나, 숏 예측 시 현재가보다 높은 목표가를 주지 마세요. 무조건 이 산술적 원칙을 지켜야 합니다.\n" +
+                "4. recommended_leverage: 이 포지션 진입에 적합한 추천 레버리지 배수(정수 1, 5, 10, 25, 50 중 하나)를 선택해 주세요. 시장 변동성과 리스크에 맞춰 적절하게 결정해야 합니다.\n" +
+                "5. reason: 왜 이런 레버리지 포지션 지침과 가격을 설정했는지 2~3문장 길이의 명쾌하고 전문적인 분석 코멘트(한국어)를 작성해주세요.\n\n" +
+                "반드시 아래 JSON 형식으로만 응답하세요:\n" +
+                "{\"action\": \"<action>\", \"target_price\": <number>, \"stop_loss\": <number>, \"recommended_leverage\": <number>, \"reason\": \"<분석 코멘트>\"}",
+                ticker, prediction, confidence, currentPrice, currentPrice, currentPrice, currentPrice, currentPrice
             );
 
             HttpHeaders headers = new HttpHeaders();
@@ -81,7 +95,7 @@ public class AutoTradingService {
             requestBody.put("model", "gpt-4o-mini"); 
             requestBody.put("response_format", Map.of("type", "json_object"));
             requestBody.put("messages", List.of(
-                    Map.of("role", "system", "content", "당신은 가상화폐 수석 애널리스트입니다."),
+                    Map.of("role", "system", "content", "당신은 가상화폐 선물 거래 수석 애널리스트입니다."),
                     Map.of("role", "user", "content", prompt)
             ));
 
@@ -92,14 +106,48 @@ public class AutoTradingService {
             String content = gptResponse.get("choices").get(0).get("message").get("content").asText();
             
             JsonNode decisionJson = objectMapper.readTree(content);
-            String reason = decisionJson.get("reason").asText();
+            String action = decisionJson.has("action") ? decisionJson.get("action").asText() : "HOLD";
+            Long targetPrice = decisionJson.has("target_price") ? decisionJson.get("target_price").asLong() : 0L;
+            Long stopLossPrice = decisionJson.has("stop_loss") ? decisionJson.get("stop_loss").asLong() : 0L;
+            Integer recommendedLeverage = decisionJson.has("recommended_leverage") ? decisionJson.get("recommended_leverage").asInt() : 1;
+            String reason = decisionJson.has("reason") ? decisionJson.get("reason").asText() : "";
+
+            // 인공지능 예측값의 수학적 정합성을 강제 보증하는 백엔드 방어 필터 (Validation Guard)
+            long currentPriceRound = Math.round(currentPrice);
+            if (action.contains("LONG")) {
+                // 롱 포지션인데 목표가가 현재가보다 같거나 낮으면 강제 5% 익절가로 보정
+                if (targetPrice <= currentPriceRound) {
+                    targetPrice = Math.round(currentPrice * 1.05);
+                }
+                // 롱 포지션인데 손절가가 현재가보다 같거나 높으면 강제 3% 손절가로 보정
+                if (stopLossPrice >= currentPriceRound || stopLossPrice <= 0) {
+                    stopLossPrice = Math.round(currentPrice * 0.97);
+                }
+            } else if (action.contains("SHORT")) {
+                // 숏 포지션인데 목표가가 현재가보다 같거나 높으면 강제 5% 익절가로 보정
+                if (targetPrice >= currentPriceRound || targetPrice <= 0) {
+                    targetPrice = Math.round(currentPrice * 0.95);
+                }
+                // 숏 포지션인데 손절가가 현재가보다 같거나 낮으면 강제 3% 손절가로 보정
+                if (stopLossPrice <= currentPriceRound) {
+                    stopLossPrice = Math.round(currentPrice * 1.03);
+                }
+            } else {
+                targetPrice = 0L;
+                stopLossPrice = 0L;
+            }
 
             return AiPredictionResponse.builder()
                     .ticker(ticker)
                     .prediction(prediction)
                     .confidence(confidence)
+                    .action(action)
+                    .targetPrice(targetPrice)
+                    .stopLossPrice(stopLossPrice)
+                    .recommendedLeverage(recommendedLeverage)
                     .reason(reason)
                     .build();
+
 
         } catch (Exception e) {
             log.error("AI Prediction Error", e);

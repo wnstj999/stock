@@ -14,8 +14,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserStock extends BaseTimeEntity {
-    
+@Table(name = "limit_order")
+public class LimitOrder extends BaseTimeEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,25 +29,27 @@ public class UserStock extends BaseTimeEntity {
     @JoinColumn(name = "stock_id", nullable = false)
     private Stock stock;
 
-    @Column(nullable = false)
-    private Long quantity; // 보유 수량
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private PositionType positionType; // LONG or SHORT
 
     @Column(nullable = false)
-    private Long averagePrice; // 평단가
+    private Double price; // 지정가
 
-    public void addQuantity(Long amount, Long price) {
-        long totalCost = (this.quantity * this.averagePrice) + (amount * price);
-        this.quantity += amount;
-        this.averagePrice = totalCost / this.quantity;
-    }
+    @Column(nullable = false)
+    private Double quantity; // 주문 계약 수량
 
-    public void deductQuantity(Long amount) {
-        if (this.quantity < amount) {
-            throw new IllegalArgumentException("보유 수량이 부족합니다.");
-        }
-        this.quantity -= amount;
-        if (this.quantity == 0) {
-            this.averagePrice = 0L;
-        }
+    @Column(nullable = false)
+    private Integer leverage; // 주문 레버리지
+
+    @Column(nullable = false)
+    private Double margin; // 주문 증거금 락 = (price * quantity) / leverage
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 15)
+    private OrderStatus status; // PENDING, FILLED, CANCELED
+
+    public void updateStatus(OrderStatus newStatus) {
+        this.status = newStatus;
     }
 }

@@ -28,12 +28,13 @@ public class TradeHistory extends BaseTimeEntity {
     @JoinColumn(name = "stock_id", nullable = false)
     private Stock stock;
 
-    @Column(nullable = false, length = 10)
-    private String tradeType; // BUY or SELL
+    @Column(nullable = false, length = 20)
+    private String tradeType; // OPEN_LONG, OPEN_SHORT, CLOSE_LONG, CLOSE_SHORT
 
     @Column(nullable = false)
-    private Long price; // 체결가
+    private Double price; // 체결가
 
     @Column(nullable = false)
-    private Long quantity; // 체결 수량
+    private Double quantity; // 체결 수량
 }
+

@@ -5,9 +5,13 @@ import com.mock.stock.domain.stock.entity.Stock;
 import com.mock.stock.domain.stock.repository.StockRepository;
 import com.mock.stock.domain.user.dto.RankResponse;
 import com.mock.stock.domain.user.entity.User;
-import com.mock.stock.domain.trade.entity.UserStock;
+import com.mock.stock.domain.trade.entity.Position;
+import com.mock.stock.domain.trade.entity.PositionType;
+import com.mock.stock.domain.trade.entity.LimitOrder;
+import com.mock.stock.domain.trade.entity.OrderStatus;
 import com.mock.stock.domain.user.repository.UserRepository;
-import com.mock.stock.domain.trade.repository.UserStockRepository;
+import com.mock.stock.domain.trade.repository.PositionRepository;
+import com.mock.stock.domain.trade.repository.LimitOrderRepository;
 import com.mock.stock.domain.wallet.entity.Wallet;
 import com.mock.stock.domain.wallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +28,8 @@ public class RankService {
 
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
-    private final UserStockRepository userStockRepository;
+    private final PositionRepository positionRepository;
+    private final LimitOrderRepository limitOrderRepository;
     private final StockRepository stockRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -51,7 +56,7 @@ public class RankService {
                     }
                 }
             } catch (Exception e) {
-                // Fallback to average price if API fails
+                // Fallback to entry price if API fails
             }
         }
 
@@ -64,13 +69,24 @@ public class RankService {
             long balance = wallet != null ? wallet.getBalance().longValue() : 0L;
             
             long stocksValue = 0L;
-            List<UserStock> userStocks = userStockRepository.findByUserId(user.getId());
-            for (UserStock us : userStocks) {
-                Long currentPrice = currentPrices.get(us.getStock().getId());
-                if (currentPrice == null) {
-                    currentPrice = us.getAveragePrice();
+            List<Position> userPositions = positionRepository.findByUserId(user.getId());
+            for (Position p : userPositions) {
+                Long livePriceLong = currentPrices.get(p.getStock().getId());
+                double livePrice = livePriceLong != null ? livePriceLong.doubleValue() : p.getEntryPrice();
+                
+                double unrealizedPnl = 0.0;
+                if (p.getPositionType() == PositionType.LONG) {
+                    unrealizedPnl = (livePrice - p.getEntryPrice()) * p.getQuantity();
+                } else {
+                    unrealizedPnl = (p.getEntryPrice() - livePrice) * p.getQuantity();
                 }
-                stocksValue += us.getQuantity() * currentPrice;
+                stocksValue += Math.round(p.getMargin() + unrealizedPnl);
+            }
+
+            // 미체결 지정가 주문에 잠겨 있는 증거금도 총 자산에 합산
+            List<LimitOrder> pendingOrders = limitOrderRepository.findByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), OrderStatus.PENDING);
+            for (LimitOrder o : pendingOrders) {
+                stocksValue += Math.round(o.getMargin());
             }
             
             rankings.add(RankResponse.builder()
@@ -95,3 +111,5 @@ public class RankService {
         return top10;
     }
 }
+
+

@@ -17,7 +17,7 @@ spring:
         default_batch_fetch_size: 100
 
 openai:
-  api-key: YOUR_OPENAI_API_KEY_HERE
+  api-key: ${OPENAI_API_KEY:YOUR_OPENAI_API_KEY_HERE}
 
 logging:
   level:

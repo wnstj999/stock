@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MockStock - Binance Style</title>
-    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="dashboard.css?v=3">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- 트레이딩뷰 종합 위젯 라이브러리 로드 -->
     <script src="https://s3.tradingview.com/tv.js"></script>
@@ -14,7 +14,7 @@
 </head>
 <body>
     <nav class="navbar">
-        <div class="logo">모의투자<span style="color: #fcd535;">크립토</span></div>
+        <div class="logo">코인<span style="color: #fcd535;">모의투자</span></div>
         <div class="user-info">
             <span id="userNickname">로딩중...</span>
         </div>
@@ -69,24 +69,57 @@
             <!-- 차트 영역 -->
             <div id="tvchart" class="chart-container"></div>
             
-            <!-- 보유 자산 현황 테이블 (바이낸스 스타일로 리뉴얼) -->
+            <!-- 나의 선물 포지션 및 미체결 대기 주문 현황판 -->
             <div class="holdings-section">
-                <div class="panel-header">
-                    <span>나의 보유 자산</span>
-                    <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">예수금: <strong id="walletBalance" style="color:var(--text-main);">0 KRW</strong></span>
+                <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0 16px;">
+                    <div style="display: flex; gap: 4px; align-items: center; height: 100%;">
+                        <button type="button" class="tab-btn active" id="tabPosBtn" onclick="switchBottomTab('pos')" style="background:transparent; border:none; color:var(--text-main); font-size:12px; font-weight:600; cursor:pointer; height:35px; border-bottom:2px solid var(--binance-yellow); padding: 0 8px; margin-right: 8px;">보유 포지션</button>
+                        <button type="button" class="tab-btn" id="tabOrderBtn" onclick="switchBottomTab('order')" style="background:transparent; border:none; color:var(--text-muted); font-size:12px; font-weight:600; cursor:pointer; height:35px; border-bottom:2px solid transparent; padding: 0 8px;">미체결 주문 <span id="pendingOrdersCount" style="color:var(--binance-yellow); font-weight:700;">(0)</span></button>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); display:flex; gap:12px;">
+                        <span>총 자산: <strong id="totalAssetValue" style="color:#fcd535;">0 KRW</strong></span>
+                        <span>가용 잔고: <strong id="walletBalance" style="color:var(--text-main);">0 KRW</strong></span>
+                        <span>주문 대기금: <strong id="lockedBalance" style="color:var(--text-main);">0 KRW</strong></span>
+                    </div>
                 </div>
-                <div class="holdings-table-container">
+                <!-- 1. 보유 포지션 테이블 -->
+                <div class="holdings-table-container" id="posTableContainer">
                     <table class="holdings-table">
                         <thead>
                             <tr>
-                                <th>보유코인</th>
-                                <th>보유수량</th>
-                                <th>평균매수가</th>
+                                <th>종목</th>
+                                <th>구분</th>
+                                <th>레버리지</th>
+                                <th>수량</th>
+                                <th>진입가</th>
                                 <th>현재가</th>
-                                <th>평가손익</th>
+                                <th>증거금</th>
+                                <th>미실현 손익 (PNL)</th>
+                                <th>익절/손절 (TP/SL)</th>
+                                <th>액션</th>
                             </tr>
                         </thead>
                         <tbody id="holdingsList">
+                            <!-- JS로 렌더링 -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 2. 미체결 대기 주문 테이블 -->
+                <div class="holdings-table-container" id="orderTableContainer" style="display:none;">
+                    <table class="holdings-table">
+                        <thead>
+                            <tr>
+                                <th>주문종목</th>
+                                <th>구분</th>
+                                <th>레버리지</th>
+                                <th>주문수량</th>
+                                <th>지정가격</th>
+                                <th>주문증거금</th>
+                                <th>접수시간</th>
+                                <th>액션</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingOrdersList">
                             <!-- JS로 렌더링 -->
                         </tbody>
                     </table>
@@ -109,57 +142,89 @@
 
             <!-- 주문 폼 -->
             <div class="order-section">
-                <div class="panel-header">주문 입력</div>
+                <div class="panel-header">선물 주문 입력</div>
                 <div class="order-tabs">
-                    <button class="order-tab active" id="tabBuy" onclick="switchOrderTab('buy')">매수</button>
-                    <button class="order-tab" id="tabSell" onclick="switchOrderTab('sell')">매도</button>
+                    <button class="order-tab active" id="tabBuy" onclick="switchOrderTab('buy')">롱 오픈 (Buy/Long)</button>
+                    <button class="order-tab" id="tabSell" onclick="switchOrderTab('sell')">숏 오픈 (Sell/Short)</button>
                 </div>
                 <div class="order-form">
+                    <!-- 레버리지 선택기 -->
+                    <div class="leverage-container" style="margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; color: var(--text-muted);">
+                            <span>레버리지 설정</span>
+                            <span id="leverageVal" style="color: #fcd535; font-weight: 600;">1x</span>
+                        </div>
+                        <div class="leverage-selector-group" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;">
+                            <button type="button" class="lev-btn active" onclick="selectLeverage(1, this)">1x</button>
+                            <button type="button" class="lev-btn" onclick="selectLeverage(5, this)">5x</button>
+                            <button type="button" class="lev-btn" onclick="selectLeverage(10, this)">10x</button>
+                            <button type="button" class="lev-btn" onclick="selectLeverage(25, this)">25x</button>
+                            <button type="button" class="lev-btn" onclick="selectLeverage(50, this)">50x</button>
+                        </div>
+                        <input type="hidden" id="selectedLeverage" value="1">
+                    </div>
+
                     <div class="input-row">
                         <label>주문구분</label>
-                        <input type="text" id="orderPrice" disabled value="시장가">
+                        <select id="orderTypeSelect" onchange="toggleOrderTypeMode()" style="background:transparent; border:none; color:var(--text-main); font-size:13px; text-align:right; width:60%; outline:none; direction:rtl; cursor:pointer;">
+                            <option value="MARKET" style="background:var(--bg-panel); color:var(--text-main);">시장가</option>
+                            <option value="LIMIT" style="background:var(--bg-panel); color:var(--text-main);">지정가</option>
+                        </select>
                     </div>
+                    <!-- 지정가 선택 시 활성화될 가격 입력창 -->
+                    <div class="input-row" id="limitPriceRow" style="display:none;">
+                        <label>지정가격 (KRW)</label>
+                        <input type="number" id="limitPriceInput" placeholder="가격 입력" oninput="updateExpectedTotal()" style="background:transparent; border:none; color:var(--text-main); font-size:13px; text-align:right; width:60%; outline:none;">
+                    </div>
+                    
+                    <!-- 주문 단위 전환 탭 -->
+                    <div class="order-unit-tabs" style="display: flex; gap: 4px; margin-bottom: 8px;">
+                        <button type="button" class="unit-tab active" id="unitQty" onclick="switchOrderUnit('qty')" style="flex:1; padding:5px 0; background:var(--bg-panel); border:1px solid var(--border-color); color:var(--text-main); font-size:10px; border-radius:3px; cursor:pointer; font-weight:600; transition: 0.2s;">수량 (Qty)</button>
+                        <button type="button" class="unit-tab" id="unitVal" onclick="switchOrderUnit('val')" style="flex:1; padding:5px 0; background:var(--bg-panel); border:1px solid var(--border-color); color:var(--text-muted); font-size:10px; border-radius:3px; cursor:pointer; font-weight:600; transition: 0.2s;">금액 (KRW)</button>
+                    </div>
+                    <input type="hidden" id="selectedOrderUnit" value="qty">
+
                     <div class="input-row">
-                        <label>주문수량</label>
+                        <label id="quantityLabel">주문수량 (BTC)</label>
                         <input type="number" id="tradeQuantity" min="0.0001" step="0.0001" value="1" oninput="updateExpectedTotal()">
                     </div>
                     
                     <!-- 예상 결제 금액 영역 -->
                     <div class="expected-total-container">
-                        <span>예상 결제 금액</span>
+                        <span>필요 증거금</span>
                         <span id="expectedTotal">0 KRW</span>
                     </div>
                     
                     <!-- 25%, 50%, 75%, 100% 비율 선택 버튼 추가 -->
                     <div class="ratio-buttons">
-                        <button type="button" class="ratio-btn" onclick="selectRatio(0.25)">25%</button>
-                        <button type="button" class="ratio-btn" onclick="selectRatio(0.50)">50%</button>
-                        <button type="button" class="ratio-btn" onclick="selectRatio(0.75)">75%</button>
-                        <button type="button" class="ratio-btn" onclick="selectRatio(1.00)">100%</button>
+                        <button type="button" class="ratio-btn" onclick="selectRatio(0.25, this)">25%</button>
+                        <button type="button" class="ratio-btn" onclick="selectRatio(0.50, this)">50%</button>
+                        <button type="button" class="ratio-btn" onclick="selectRatio(0.75, this)">75%</button>
+                        <button type="button" class="ratio-btn" onclick="selectRatio(1.00, this)">100%</button>
                     </div>
-
-                    <button id="executeBtn" class="execute-btn buy-btn" onclick="executeTrade()">매수 <span id="orderTargetCoin">BTC</span></button>
+ 
+                    <button id="executeBtn" class="execute-btn buy-btn" onclick="executeTrade()">롱 오픈 <span id="orderTargetCoin">BTC</span></button>
                     <div id="orderMessage" class="message-box"></div>
                     
                     <!-- 영수증 피드백 카드 -->
                     <div id="receiptCard" class="receipt-card" style="display: none;">
-                        <div class="receipt-title">🧾 체결 완료 영수증</div>
+                        <div class="receipt-title">🧾 포지션 진입 완료 영수증</div>
                         <div class="receipt-divider"></div>
                         <div class="receipt-row">
                             <span>구분</span>
                             <span id="receiptType" class="receipt-value" style="font-weight:700;">-</span>
                         </div>
                         <div class="receipt-row">
-                            <span>체결단가</span>
+                            <span>진입단가</span>
                             <span id="receiptPrice" class="receipt-value">0 KRW</span>
                         </div>
                         <div class="receipt-row">
-                            <span>체결수량</span>
+                            <span>계약수량</span>
                             <span id="receiptQty" class="receipt-value">0 BTC</span>
                         </div>
                         <div class="receipt-divider"></div>
                         <div class="receipt-row font-highlight">
-                            <span>총 결제액</span>
+                            <span>차감 증거금</span>
                             <span id="receiptTotal">0 KRW</span>
                         </div>
                     </div>
@@ -176,10 +241,24 @@
                 <div class="ai-content">
                     <button id="aiPredictBtn" class="ai-predict-btn" onclick="analyzeWithAI()">🔍 현재 시장 분석하기</button>
                     <div id="aiResultBox" class="ai-result-box" style="display:none;">
-                        <div class="ai-prediction-row">
-                            <span style="color: var(--text-muted);">예측 방향: </span>
-                            <strong id="aiDirection" style="font-size: 16px;">-</strong>
-                            <span id="aiConfidence" style="margin-left: 8px; font-size: 12px; color: var(--text-muted);">(-)</span>
+                        <div class="ai-prediction-row" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span id="aiActionBadge" class="ai-badge">-</span>
+                                <span id="aiConfidence" style="margin-left: 8px; font-size: 11px; color: var(--text-muted);">(-)</span>
+                            </div>
+                            <div style="font-size: 11px; color: var(--binance-yellow); font-weight: 600; background: rgba(252, 213, 53, 0.12); padding: 2px 6px; border-radius: 4px;">
+                                🤖 추천 배율: <span id="aiRecommendedLeverage" style="font-weight: 800;">-</span>
+                            </div>
+                        </div>
+                        <div class="ai-price-row">
+                            <div class="ai-price-item">
+                                <span class="ai-price-label">🎯 목표가</span>
+                                <strong id="aiTargetPrice" class="ai-price-value">-</strong>
+                            </div>
+                            <div class="ai-price-item">
+                                <span class="ai-price-label">🛑 손절가</span>
+                                <strong id="aiStopLossPrice" class="ai-price-value">-</strong>
+                            </div>
                         </div>
                         <div class="ai-reason" id="aiReason">분석 내용이 여기에 표시됩니다.</div>
                     </div>
@@ -237,6 +316,36 @@
         </div>
     </div>
 
-    <script src="dashboard.js"></script>
+    <!-- TP/SL Custom Setting Modal -->
+    <div id="tpslModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>⚙️ 익절 / 손절 (TP/SL) 예약 설정</h2>
+                <span class="close" onclick="closeTpSlModal()">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 10px 0;">
+                <input type="hidden" id="tpslPositionId">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">자동 익절가 (Take Profit Price)</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <input type="number" id="modalTpInput" placeholder="익절 가격 입력" style="width: 100%; padding: 10px; background: var(--bg-base); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; outline: none; font-size: 13px;">
+                        <span style="position: absolute; right: 12px; font-size: 12px; color: var(--text-muted);">KRW</span>
+                    </div>
+                    <span style="font-size: 10px; color: var(--binance-up); margin-top: 4px; display: block;">* 설정가 이상 도달 시 포지션을 시장가로 즉시 익절 청산합니다. (0 입력 시 해제)</span>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">자동 손절가 (Stop Loss Price)</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <input type="number" id="modalSlInput" placeholder="손절 가격 입력" style="width: 100%; padding: 10px; background: var(--bg-base); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; outline: none; font-size: 13px;">
+                        <span style="position: absolute; right: 12px; font-size: 12px; color: var(--text-muted);">KRW</span>
+                    </div>
+                    <span style="font-size: 10px; color: var(--binance-down); margin-top: 4px; display: block;">* 설정가 이하 도달 시 포지션을 시장가로 즉시 손절 청산합니다. (0 입력 시 해제)</span>
+                </div>
+                <button type="button" onclick="submitTpSl()" style="width: 100%; padding: 12px; background: var(--binance-yellow); border: none; color: #000; font-weight: 700; border-radius: 6px; cursor: pointer; font-size: 13px; transition: 0.2s;">설정 완료</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js?v=3"></script>
 </body>
 </html>

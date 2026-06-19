@@ -11,5 +11,10 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 public class TradeRequest {
     private String ticker;
-    private Long quantity;
+    private Double quantity;
+    private Integer leverage;
+    private Double price; // 지정가
+    private String orderType; // "MARKET" or "LIMIT"
 }
+
+

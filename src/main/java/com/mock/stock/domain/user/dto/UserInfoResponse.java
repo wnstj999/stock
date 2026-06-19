@@ -11,15 +11,27 @@ public class UserInfoResponse {
     private String email;
     private String nickname;
     private BigDecimal walletBalance;
-    private List<UserStockDto> holdings;
+    private BigDecimal lockedBalance; 
+    private List<PositionDto> holdings;
+    private List<com.mock.stock.domain.trade.dto.LimitOrderResponse> pendingOrders; 
+
 
     @Data
     @Builder
-    public static class UserStockDto {
+    public static class PositionDto {
+        private Long id;
         private String ticker;
         private String companyName;
-        private Long quantity;
-        private Long averagePrice;
-        private Long currentPrice;
+        private String positionType;
+        private Double quantity;
+        private Double entryPrice;
+        private Double currentPrice;
+        private Integer leverage;
+        private Double margin;
+        private Double unrealizedPnl;
+        private Double pnlRate;
+        private Double takeProfitPrice;
+        private Double stopLossPrice;
     }
 }
+
