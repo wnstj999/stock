@@ -28,13 +28,18 @@ public class StockService {
     public void initStocks() {
         // 이미 DB의 주식 잔재가 소거되었으므로, 서버 재시작 시 데이터 소실을 막기 위해 
         // deleteAll 강제 소거 로직을 완전히 제거하고 코인 5종이 없을 때만 주입하도록 복구합니다.
-        if (stockRepository.count() == 0) {
-            stockRepository.save(Stock.builder().ticker("KRW-BTC").companyName("비트코인").currentPrice(0L).previousClose(0L).build());
-            stockRepository.save(Stock.builder().ticker("KRW-ETH").companyName("이더리움").currentPrice(0L).previousClose(0L).build());
-            stockRepository.save(Stock.builder().ticker("KRW-XRP").companyName("리플").currentPrice(0L).previousClose(0L).build());
-            stockRepository.save(Stock.builder().ticker("KRW-SOL").companyName("솔라나").currentPrice(0L).previousClose(0L).build());
-            stockRepository.save(Stock.builder().ticker("KRW-DOGE").companyName("도지코인").currentPrice(0L).previousClose(0L).build());
-            log.info("코인 모의투자 마켓 기초 데이터 5종 세팅을 완료했습니다.");
+        String[] tickers = {"KRW-BTC", "KRW-ETH", "KRW-XRP", "KRW-SOL", "KRW-DOGE"};
+        String[] names = {"비트코인", "이더리움", "리플", "솔라나", "도지코인"};
+        for (int i = 0; i < tickers.length; i++) {
+            if (stockRepository.findByTicker(tickers[i]) == null) {
+                stockRepository.save(Stock.builder()
+                        .ticker(tickers[i])
+                        .companyName(names[i])
+                        .currentPrice(0L)
+                        .previousClose(0L)
+                        .build());
+                log.info("코인 모의투자 마켓 기초 데이터 주입 완료: {}", tickers[i]);
+            }
         }
     }
 

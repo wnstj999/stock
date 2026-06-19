@@ -70,15 +70,16 @@ public class AutoTradingService {
                 "- 예측 신뢰도(확률): %.2f%%\n" +
                 "- 현재 가격: %.2f USDT\n\n" +
                 "이 데이터와 당신의 최근 시장 지식을 결합하여, 유저에게 다음과 같은 구체적인 마진/선물 매매 지침을 내려주세요.\n" +
+                "이 모의투자는 극초단기 스캘핑(초단타 거래) 연습을 위해 최적화되어 있으므로, 목표가와 손절가는 극히 조밀한 변동폭으로 아주 타이트하게 주어져야 합니다.\n" +
                 "1. action: 'STRONG_LONG', 'LONG', 'HOLD', 'SHORT', 'STRONG_SHORT' 중 하나를 선택하세요.\n" +
                 "   (포지션이 없더라도 숏 포지션 진입을 고려할 수 있습니다. 숏 진입 시에는 가격이 하락하면 수익을 얻습니다.)\n" +
                 "2. target_price: 이 포지션(롱 또는 숏)에 진입했을 때 얼마에 익절(Take Profit)해야 할지 목표가(USDT)를 숫자로 적어주세요.\n" +
-                "   - 롱 포지션(LONG, STRONG_LONG)인 경우: 반드시 현재가(%.2f)보다 높은 가격이어야 합니다. (예: 현재가 대비 +2%% ~ +10%% 사이)\n" +
-                "   - 숏 포지션(SHORT, STRONG_SHORT)인 경우: 반드시 현재가(%.2f)보다 낮은 가격이어야 합니다. (예: 현재가 대비 -2%% ~ -10%% 사이)\n" +
+                "   - 롱 포지션(LONG, STRONG_LONG)인 경우: 반드시 현재가(%.2f)보다 높은 가격이어야 합니다. (극도로 타이트하게 현재가 대비 +0.1%% ~ +0.3%% 사이)\n" +
+                "   - 숏 포지션(SHORT, STRONG_SHORT)인 경우: 반드시 현재가(%.2f)보다 낮은 가격이어야 합니다. (극도로 타이트하게 현재가 대비 -0.1%% ~ -0.3%% 사이)\n" +
                 "   - HOLD인 경우 0\n" +
                 "3. stop_loss: 이 포지션에 진입했을 때 얼마에 손절(Stop Loss)해야 할지 손절가(USDT)를 숫자로 적어주세요.\n" +
-                "   - 롱 포지션(LONG, STRONG_LONG)인 경우: 반드시 현재가(%.2f)보다 낮은 가격이어야 합니다. (예: 현재가 대비 -1%% ~ -5%% 사이)\n" +
-                "   - 숏 포지션(SHORT, STRONG_SHORT)인 경우: 반드시 현재가(%.2f)보다 높은 가격이어야 합니다. (예: 현재가 대비 +1%% ~ +5%% 사이)\n" +
+                "   - 롱 포지션(LONG, STRONG_LONG)인 경우: 반드시 현재가(%.2f)보다 낮은 가격이어야 합니다. (극도로 타이트하게 현재가 대비 -0.05%% ~ -0.15%% 사이)\n" +
+                "   - 숏 포지션(SHORT, STRONG_SHORT)인 경우: 반드시 현재가(%.2f)보다 높은 가격이어야 합니다. (극도로 타이트하게 현재가 대비 +0.05%% ~ +0.15%% 사이)\n" +
                 "   - HOLD인 경우 0\n" +
                 "   [수학적 정합성 규칙]: 절대로 롱 예측 시 현재가보다 낮은 목표가를 주거나, 숏 예측 시 현재가보다 높은 목표가를 주지 마세요. 무조건 이 산술적 원칙을 지켜야 합니다.\n" +
                 "4. recommended_leverage: 이 포지션 진입에 적합한 추천 레버리지 배수(정수 1, 5, 10, 25, 50 중 하나)를 선택해 주세요. 시장 변동성과 리스크에 맞춰 적절하게 결정해야 합니다.\n" +
@@ -115,20 +116,20 @@ public class AutoTradingService {
             Integer recommendedLeverage = decisionJson.has("recommended_leverage") ? decisionJson.get("recommended_leverage").asInt() : 1;
             String reason = decisionJson.has("reason") ? decisionJson.get("reason").asText() : "";
 
-            // 인공지능 예측값의 수학적 정합성을 강제 보증하는 백엔드 방어 필터 (USDT 기준)
+            // 인공지능 예측값의 수학적 정합성을 강제 보증하는 백엔드 방어 필터 (USDT 기준 - 초단타 맞춤 설정)
             if (action.contains("LONG")) {
                 if (targetPriceUsdt <= currentPriceUsdt) {
-                    targetPriceUsdt = currentPriceUsdt * 1.05;
+                    targetPriceUsdt = currentPriceUsdt * 1.002; // 롱 기본 목표가 +0.2%
                 }
                 if (stopLossPriceUsdt >= currentPriceUsdt || stopLossPriceUsdt <= 0) {
-                    stopLossPriceUsdt = currentPriceUsdt * 0.97;
+                    stopLossPriceUsdt = currentPriceUsdt * 0.999; // 롱 기본 손절가 -0.1%
                 }
             } else if (action.contains("SHORT")) {
                 if (targetPriceUsdt >= currentPriceUsdt || targetPriceUsdt <= 0) {
-                    targetPriceUsdt = currentPriceUsdt * 0.95;
+                    targetPriceUsdt = currentPriceUsdt * 0.998; // 숏 기본 목표가 -0.2%
                 }
                 if (stopLossPriceUsdt <= currentPriceUsdt) {
-                    stopLossPriceUsdt = currentPriceUsdt * 1.03;
+                    stopLossPriceUsdt = currentPriceUsdt * 1.001; // 숏 기본 손절가 +0.1%
                 }
             } else {
                 targetPriceUsdt = 0.0;

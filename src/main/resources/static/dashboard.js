@@ -1,4 +1,5 @@
 const API_BASE = 'http://localhost:8080/api';
+const EXCHANGE_RATE = 1350; // 1 USDT = 1,350 KRW 고정 환율
 let currentStocks = {}; 
 let selectedTicker = 'KRW-BTC';
 let selectedCompanyName = '비트코인';
@@ -58,12 +59,15 @@ async function fetchUserInfo() {
             const walletBalance = Number(data.walletBalance);
             const lockedBalance = Number(data.lockedBalance || 0);
             
-            document.getElementById('walletBalance').innerText = walletBalance.toLocaleString() + ' KRW';
-            document.getElementById('lockedBalance').innerText = lockedBalance.toLocaleString() + ' KRW';
+            const walletBalanceUsdt = walletBalance / EXCHANGE_RATE;
+            const lockedBalanceUsdt = lockedBalance / EXCHANGE_RATE;
+            
+            document.getElementById('walletBalance').innerText = walletBalanceUsdt.toFixed(2) + ' USDT';
+            document.getElementById('lockedBalance').innerText = lockedBalanceUsdt.toFixed(2) + ' USDT';
             
             holdingsData = data.holdings;
             
-            // 총 자산 가치 = 가용 잔고 + 대기주문 락 증거금 + 총 포지션 증거금 + 총 미실현 손익
+            // 총 자산 가치 = 가용 잔고 + 대기주문 락 증거금 + 총 포지션 증거금 + 총 미실현 손익 (KRW로 계산 후 변환)
             let totalAssetValue = walletBalance + lockedBalance;
             holdingsData.forEach(h => {
                 const livePrice = currentStocks[h.ticker]?.currentPrice || h.currentPrice || h.entryPrice;
@@ -75,7 +79,11 @@ async function fetchUserInfo() {
                 }
                 totalAssetValue += h.margin + unrealizedPnl;
             });
-            document.getElementById('totalAssetValue').innerText = Math.round(totalAssetValue).toLocaleString() + ' KRW';
+            const totalAssetValueUsdt = totalAssetValue / EXCHANGE_RATE;
+            document.getElementById('totalAssetValue').innerText = totalAssetValueUsdt.toFixed(2) + ' USDT';
+            
+            // 지갑 밑의 원화 환산 텍스트 병기
+            document.getElementById('walletBalanceKrw').innerText = `(원화 환산 - 총자산: ${Math.round(totalAssetValue).toLocaleString()} KRW / 가용: ${Math.round(walletBalance).toLocaleString()} KRW)`;
             
             // 대기 지정가 주문 목록 표시
             document.getElementById('pendingOrdersCount').innerText = `(${data.pendingOrders ? data.pendingOrders.length : 0})`;
@@ -225,24 +233,33 @@ async function fallbackFetchOrderbook() {
 
 function updateSelectedCoinStats(ticker, price, prevClose, high, low, volume) {
     const headerPrice = document.getElementById('chartPrice');
-    const diff = price - prevClose;
-    const diffPercent = ((diff / prevClose) * 100).toFixed(2);
+    
+    // USDT 환산
+    const priceUsdt = price / EXCHANGE_RATE;
+    const prevCloseUsdt = prevClose / EXCHANGE_RATE;
+    const highUsdt = high / EXCHANGE_RATE;
+    const lowUsdt = low / EXCHANGE_RATE;
+    
+    const diff = priceUsdt - prevCloseUsdt;
+    const diffPercent = ((diff / prevCloseUsdt) * 100).toFixed(2);
     const colorClass = diff > 0 ? 'price-up' : (diff < 0 ? 'price-down' : '');
     const sign = diff > 0 ? '+' : '';
 
-    headerPrice.innerText = price.toLocaleString() + ' KRW';
+    const decimalPlaces = priceUsdt < 1 ? 4 : 2;
+
+    headerPrice.innerText = priceUsdt.toFixed(decimalPlaces) + ' USDT';
     headerPrice.className = 'chart-price ' + colorClass;
 
     // 24시간 최고가, 최저가, 거래량 바인딩
-    document.getElementById('tickerHigh').innerText = high.toLocaleString();
-    document.getElementById('tickerLow').innerText = low.toLocaleString();
+    document.getElementById('tickerHigh').innerText = highUsdt.toFixed(decimalPlaces);
+    document.getElementById('tickerLow').innerText = lowUsdt.toFixed(decimalPlaces);
     document.getElementById('tickerVol').innerText = Math.round(volume).toLocaleString();
 
     // 호가창 중간 현재가 영역도 동시에 실시간 업데이트
     const midPriceText = document.getElementById('midPriceText');
     const midPriceChange = document.getElementById('midPriceChange');
     if (midPriceText && midPriceChange) {
-        midPriceText.innerText = price.toLocaleString();
+        midPriceText.innerText = priceUsdt.toFixed(decimalPlaces);
         midPriceText.className = colorClass;
         midPriceChange.innerText = `${sign}${diffPercent}%`;
         midPriceChange.className = 'mid-change ' + colorClass;
@@ -261,11 +278,15 @@ function renderOrderbook(units) {
     
     // 호가 클릭 시 해당 호가 물량이 입력되도록 수정
     units.forEach(u => {
+        const askPriceUsdt = u.ask_price / EXCHANGE_RATE;
+        const bidPriceUsdt = u.bid_price / EXCHANGE_RATE;
+        const decimalPlaces = askPriceUsdt < 1 ? 4 : 2;
+
         const askWidth = (u.ask_size / maxAskSize) * 100;
         sellHtml += `
             <div class="ob-row" onclick="document.getElementById('tradeQuantity').value='${u.ask_size.toFixed(4)}'">
                 <div class="ob-bg ob-sell-bg" style="width: ${askWidth}%"></div>
-                <div class="ob-price ob-sell-price">${u.ask_price.toLocaleString()}</div>
+                <div class="ob-price ob-sell-price">${askPriceUsdt.toFixed(decimalPlaces)}</div>
                 <div class="ob-size">${u.ask_size.toFixed(4)}</div>
             </div>
         `;
@@ -274,7 +295,7 @@ function renderOrderbook(units) {
         buyHtml += `
             <div class="ob-row" onclick="document.getElementById('tradeQuantity').value='${u.bid_size.toFixed(4)}'">
                 <div class="ob-bg ob-buy-bg" style="width: ${bidWidth}%"></div>
-                <div class="ob-price ob-buy-price">${u.bid_price.toLocaleString()}</div>
+                <div class="ob-price ob-buy-price">${bidPriceUsdt.toFixed(decimalPlaces)}</div>
                 <div class="ob-size">${u.bid_size.toFixed(4)}</div>
             </div>
         `;
@@ -288,8 +309,12 @@ function renderSingleStockItem(ticker, companyName, price, prevClose) {
     const list = document.getElementById('stockList');
     let itemDiv = document.getElementById('stock-item-' + ticker);
     
-    const diff = price - prevClose;
-    const diffPercent = ((diff / prevClose) * 100).toFixed(2);
+    const priceUsdt = price / EXCHANGE_RATE;
+    const prevCloseUsdt = prevClose / EXCHANGE_RATE;
+    const decimalPlaces = priceUsdt < 1 ? 4 : 2;
+
+    const diff = priceUsdt - prevCloseUsdt;
+    const diffPercent = ((diff / prevCloseUsdt) * 100).toFixed(2);
     const colorClass = diff > 0 ? 'price-up' : (diff < 0 ? 'price-down' : '');
     const sign = diff > 0 ? '+' : '';
 
@@ -319,7 +344,7 @@ function renderSingleStockItem(ticker, companyName, price, prevClose) {
             <span class="stock-ticker">${ticker.replace('KRW-', '')}</span>
             <span class="stock-name">${companyName}</span>
         </div>
-        <div class="stock-price ${colorClass}">${price.toLocaleString()}</div>
+        <div class="stock-price ${colorClass}">${priceUsdt.toFixed(decimalPlaces)}</div>
         <div class="stock-change ${colorClass}">${sign}${diffPercent}%</div>
     `;
 }
@@ -335,7 +360,7 @@ function renderHoldings() {
     holdingsData.forEach(h => {
         const livePrice = currentStocks[h.ticker]?.currentPrice || h.currentPrice || h.entryPrice;
         
-        // PNL 실시간 계산
+        // PNL 실시간 계산 (KRW 기준 연산 후 USDT로 변환)
         let pnl = 0;
         if (h.positionType === 'LONG') {
             pnl = (livePrice - h.entryPrice) * h.quantity;
@@ -349,8 +374,16 @@ function renderHoldings() {
         const badgeClass = h.positionType === 'LONG' ? 'long' : 'short';
         const typeText = h.positionType === 'LONG' ? '롱 (LONG)' : '숏 (SHORT)';
 
-        const tpVal = h.takeProfitPrice ? `${Math.round(h.takeProfitPrice).toLocaleString()} KRW` : '-';
-        const slVal = h.stopLossPrice ? `${Math.round(h.stopLossPrice).toLocaleString()} KRW` : '-';
+        // USDT 환산
+        const entryPriceUsdt = h.entryPrice / EXCHANGE_RATE;
+        const livePriceUsdt = livePrice / EXCHANGE_RATE;
+        const marginUsdt = h.margin / EXCHANGE_RATE;
+        const pnlUsdt = pnl / EXCHANGE_RATE;
+        
+        const decimalPlaces = entryPriceUsdt < 1 ? 4 : 2;
+
+        const tpVal = h.takeProfitPrice ? `${(h.takeProfitPrice / EXCHANGE_RATE).toFixed(decimalPlaces)} USDT` : '-';
+        const slVal = h.stopLossPrice ? `${(h.stopLossPrice / EXCHANGE_RATE).toFixed(decimalPlaces)} USDT` : '-';
 
         html += `
         <tr>
@@ -358,10 +391,10 @@ function renderHoldings() {
             <td><span class="position-badge ${badgeClass}">${typeText}</span></td>
             <td style="font-weight: 600; color: var(--binance-yellow);">${h.leverage}x</td>
             <td>${h.quantity.toFixed(4)}</td>
-            <td>${Math.round(h.entryPrice).toLocaleString()}</td>
-            <td>${livePrice.toLocaleString()}</td>
-            <td>${Math.round(h.margin).toLocaleString()} KRW</td>
-            <td class="pnl-text ${colorClass}">${sign}${pnlRate}% (${sign}${Math.round(pnl).toLocaleString()} KRW)</td>
+            <td>${entryPriceUsdt.toFixed(decimalPlaces)}</td>
+            <td>${livePriceUsdt.toFixed(decimalPlaces)}</td>
+            <td>${marginUsdt.toFixed(2)}</td>
+            <td class="pnl-text ${colorClass}">${sign}${pnlRate}% (${sign}${pnlUsdt.toFixed(2)} USDT)</td>
             <td style="font-size: 11px; text-align: left; padding: 6px 8px;">
                 <div style="color: var(--text-muted); display:flex; flex-direction:column; gap:2px;">
                     <span>익절(TP): <strong style="color:var(--binance-up);">${tpVal}</strong></span>
@@ -380,8 +413,17 @@ function renderHoldings() {
 // 익절/손절 커스텀 모달 열기 핸들러
 function setTpSl(positionId, currentTp, currentSl) {
     document.getElementById('tpslPositionId').value = positionId;
-    document.getElementById('modalTpInput').value = currentTp > 0 ? currentTp : '';
-    document.getElementById('modalSlInput').value = currentSl > 0 ? currentSl : '';
+    
+    // 모달에 보일 때는 USDT로 변환하여 출력
+    const currentTpUsdt = currentTp > 0 ? (currentTp / EXCHANGE_RATE) : '';
+    const currentSlUsdt = currentSl > 0 ? (currentSl / EXCHANGE_RATE) : '';
+    
+    const entryPrice = holdingsData.find(h => h.id === positionId)?.entryPrice || 0;
+    const entryPriceUsdt = entryPrice / EXCHANGE_RATE;
+    const decimalPlaces = entryPriceUsdt < 1 ? 4 : 2;
+
+    document.getElementById('modalTpInput').value = currentTpUsdt !== '' ? currentTpUsdt.toFixed(decimalPlaces) : '';
+    document.getElementById('modalSlInput').value = currentSlUsdt !== '' ? currentSlUsdt.toFixed(decimalPlaces) : '';
     document.getElementById('tpslModal').style.display = 'flex';
 }
 
@@ -392,8 +434,12 @@ function closeTpSlModal() {
 // 익절/손절 API 전송 제출
 async function submitTpSl() {
     const positionId = document.getElementById('tpslPositionId').value;
-    const tpPrice = Number(document.getElementById('modalTpInput').value) || 0;
-    const slPrice = Number(document.getElementById('modalSlInput').value) || 0;
+    const tpPriceUsdt = Number(document.getElementById('modalTpInput').value) || 0;
+    const slPriceUsdt = Number(document.getElementById('modalSlInput').value) || 0;
+
+    // 서버로는 KRW로 변환하여 전송
+    const tpPrice = tpPriceUsdt * EXCHANGE_RATE;
+    const slPrice = slPriceUsdt * EXCHANGE_RATE;
 
     try {
         const res = await fetchWithAuth(`${API_BASE}/trades/position/${positionId}/tpsl`, {
@@ -422,7 +468,7 @@ function selectCoin(ticker, companyName) {
     const activeItem = document.getElementById('stock-item-' + ticker);
     if(activeItem) activeItem.classList.add('active');
     
-    document.getElementById('chartTitle').innerText = `${ticker.replace('KRW-', '')}/KRW`;
+    document.getElementById('chartTitle').innerText = `${ticker.replace('KRW-', '')}/USDT`;
     document.getElementById('orderTargetCoin').innerText = ticker.replace('KRW-', '');
     
     // 오더북 화면 로딩 스피너/플레이스홀더
@@ -489,24 +535,26 @@ function selectRatio(ratio, element) {
         return;
     }
 
-    // 내 가용 원화 잔고 찾기
+    // 내 가용 USDT 잔고 찾기
     const balanceText = document.getElementById('walletBalance').innerText;
-    const balance = Number(balanceText.replace(/[^0-9.]/g, ''));
-    if (isNaN(balance) || balance <= 0) {
+    const balanceUsdt = Number(balanceText.replace(/[^0-9.]/g, ''));
+    if (isNaN(balanceUsdt) || balanceUsdt <= 0) {
         amountInput.value = 0;
         updateExpectedTotal();
         return;
     }
     
+    const currentPriceUsdt = currentPrice / EXCHANGE_RATE;
+    
     if (selectedOrderUnit === 'qty') {
         // 수량 모드: 가용 잔고의 지정 비율만큼 증거금 할당 시 구매할 수 있는 코인 수량 환산
-        // 수량 = (증거금 * 레버리지) / 현재가
-        const targetQuantity = (balance * ratio * selectedLeverage) / currentPrice;
+        // 수량 = (USDT증거금 * 레버리지) / 현재가(USDT)
+        const targetQuantity = (balanceUsdt * ratio * selectedLeverage) / currentPriceUsdt;
         amountInput.value = targetQuantity.toFixed(4);
     } else {
-        // 금액 모드: 가용 잔고의 지정 비율에 해당하는 원화 증거금 액수 설정
-        const targetVal = balance * ratio;
-        amountInput.value = Math.round(targetVal);
+        // 금액 모드: 가용 잔고의 지정 비율에 해당하는 USDT 증거금 액수 설정
+        const targetVal = balanceUsdt * ratio;
+        amountInput.value = targetVal.toFixed(2);
     }
     
     updateExpectedTotal();
@@ -541,20 +589,23 @@ async function executeTrade() {
     }
 
     const currentPrice = currentStocks[selectedTicker]?.currentPrice || 0;
+    const currentPriceUsdt = currentPrice / EXCHANGE_RATE;
     const orderType = document.getElementById('orderTypeSelect').value;
     
-    let basePrice = currentPrice;
-    let limitPrice = null;
+    let basePriceUsdt = currentPriceUsdt;
+    let limitPriceUsdt = null;
+    let limitPriceKrw = null;
     if (orderType === 'LIMIT') {
-        limitPrice = Number(document.getElementById('limitPriceInput').value) || 0;
-        if (limitPrice <= 0) {
+        limitPriceUsdt = Number(document.getElementById('limitPriceInput').value) || 0;
+        if (limitPriceUsdt <= 0) {
             showOrderMessage('유효한 지정가를 입력해주세요.', 'error');
             return;
         }
-        basePrice = limitPrice;
+        basePriceUsdt = limitPriceUsdt;
+        limitPriceKrw = limitPriceUsdt * EXCHANGE_RATE;
     }
 
-    if (basePrice <= 0) {
+    if (basePriceUsdt <= 0) {
         showOrderMessage('유효한 가격 정보를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.', 'error');
         return;
     }
@@ -564,8 +615,8 @@ async function executeTrade() {
     if (selectedOrderUnit === 'qty') {
         actualQty = qtyOrVal;
     } else {
-        // 입력 금액을 기반으로 계약 수량 역산
-        actualQty = (qtyOrVal * selectedLeverage) / basePrice;
+        // 입력 금액(USDT)을 기반으로 계약 수량 역산
+        actualQty = (qtyOrVal * selectedLeverage) / basePriceUsdt;
     }
 
     try {
@@ -574,7 +625,7 @@ async function executeTrade() {
             quantity: Number(actualQty.toFixed(4)),
             leverage: selectedLeverage,
             orderType: orderType,
-            price: limitPrice
+            price: limitPriceKrw // 백엔드로 보낼 가격은 KRW
         };
 
         const res = await fetchWithAuth(`${API_BASE}/trades/${currentOrderType}`, {
@@ -585,7 +636,7 @@ async function executeTrade() {
         const data = await res.text();
         if (res.ok) {
             showOrderMessage('주문이 정상 접수되었습니다.', 'success');
-            renderReceiptCard(currentOrderType, basePrice, actualQty);
+            renderReceiptCard(currentOrderType, basePriceUsdt, actualQty);
             fetchUserInfo(); 
         } else {
             try {
@@ -603,33 +654,34 @@ async function executeTrade() {
 // 실시간 예상 결제액 업데이트 데코레이터
 function updateExpectedTotal() {
     const currentPrice = currentStocks[selectedTicker]?.currentPrice || 0;
+    const currentPriceUsdt = currentPrice / EXCHANGE_RATE;
     const qtyInput = document.getElementById('tradeQuantity');
     const qtyOrVal = Number(qtyInput.value) || 0;
     const expectedTotalEl = document.getElementById('expectedTotal');
     
     const orderType = document.getElementById('orderTypeSelect').value;
-    let basePrice = currentPrice;
+    let basePriceUsdt = currentPriceUsdt;
     if (orderType === 'LIMIT') {
         const limitInput = document.getElementById('limitPriceInput').value;
-        basePrice = Number(limitInput) || currentPrice;
+        basePriceUsdt = Number(limitInput) || currentPriceUsdt;
     }
 
     let actualQty = 0;
-    let totalMargin = 0;
+    let totalMarginUsdt = 0;
 
     if (selectedOrderUnit === 'qty') {
         actualQty = qtyOrVal;
-        totalMargin = (basePrice * actualQty) / selectedLeverage;
+        totalMarginUsdt = (basePriceUsdt * actualQty) / selectedLeverage;
     } else {
-        totalMargin = qtyOrVal; // 금액 모드일 때는 입력한 KRW가 곧 필요 증거금
+        totalMarginUsdt = qtyOrVal; // 금액 모드일 때는 입력한 USDT가 곧 필요 증거금
     }
 
-    expectedTotalEl.innerText = Math.round(totalMargin).toLocaleString() + ' KRW';
+    expectedTotalEl.innerText = totalMarginUsdt.toFixed(2) + ' USDT';
     
     const balanceText = document.getElementById('walletBalance').innerText;
-    const balance = Number(balanceText.replace(/[^0-9.]/g, '')) || 0;
+    const balanceUsdt = Number(balanceText.replace(/[^0-9.]/g, '')) || 0;
     
-    if (totalMargin > balance) {
+    if (totalMarginUsdt > balanceUsdt) {
         expectedTotalEl.classList.add('warning');
     } else {
         expectedTotalEl.classList.remove('warning');
@@ -637,7 +689,7 @@ function updateExpectedTotal() {
 }
 
 // 주문 체결 영수증 카드 렌더링
-function renderReceiptCard(type, price, qty) {
+function renderReceiptCard(type, priceUsdt, qty) {
     const receiptCard = document.getElementById('receiptCard');
     const typeEl = document.getElementById('receiptType');
     const priceEl = document.getElementById('receiptPrice');
@@ -649,11 +701,12 @@ function renderReceiptCard(type, price, qty) {
     typeEl.innerText = type === 'buy' ? `롱 진입 (LONG, ${selectedLeverage}x)` : `숏 진입 (SHORT, ${selectedLeverage}x)`;
     typeEl.style.color = type === 'buy' ? 'var(--binance-up)' : 'var(--binance-down)';
     
-    priceEl.innerText = price.toLocaleString() + ' KRW';
+    const decimalPlaces = priceUsdt < 1 ? 4 : 2;
+    priceEl.innerText = priceUsdt.toFixed(decimalPlaces) + ' USDT';
     qtyEl.innerText = qty.toFixed(4) + ' ' + coinName;
     
-    const margin = (price * qty) / selectedLeverage;
-    totalEl.innerText = Math.round(margin).toLocaleString() + ' KRW';
+    const marginUsdt = (priceUsdt * qty) / selectedLeverage;
+    totalEl.innerText = marginUsdt.toFixed(2) + ' USDT';
     
     receiptCard.style.display = 'block';
     
@@ -665,7 +718,7 @@ function renderReceiptCard(type, price, qty) {
 
 // ----------------- 차트 로직 -----------------
 function initTradingViewWidget(ticker) {
-    const symbol = "UPBIT:" + ticker.replace('KRW-', '') + "KRW";
+    const symbol = "BINANCE:" + ticker.replace('KRW-', '') + "USDT";
     
     tvWidget = new TradingView.widget({
         "width": "100%",
@@ -741,13 +794,13 @@ async function analyzeWithAI() {
         confidenceEl.innerText = `(확률: ${data.confidence.toFixed(1)}%)`;
         
         if (data.targetPrice > 0) {
-            targetPriceEl.innerText = data.targetPrice.toLocaleString() + ' KRW';
+            targetPriceEl.innerText = (data.targetPrice / EXCHANGE_RATE).toFixed(2) + ' USDT';
         } else {
             targetPriceEl.innerText = '-';
         }
         
         if (data.stopLossPrice > 0) {
-            stopLossPriceEl.innerText = data.stopLossPrice.toLocaleString() + ' KRW';
+            stopLossPriceEl.innerText = (data.stopLossPrice / EXCHANGE_RATE).toFixed(2) + ' USDT';
         } else {
             stopLossPriceEl.innerText = '-';
         }
@@ -791,12 +844,16 @@ async function showHistoryModal() {
                 typeText = '🚪 숏 청산';
                 color = 'color: #eaecef';
             }
+            
+            const priceUsdt = h.price / EXCHANGE_RATE;
+            const decimalPlaces = priceUsdt < 1 ? 4 : 2;
+
             html += `
                 <tr style="border-bottom: 1px solid var(--border-color);">
                     <td style="padding: 8px;">${date}</td>
                     <td style="padding: 8px; font-weight: 600;">${h.ticker.replace('KRW-', '')}</td>
                     <td style="padding: 8px; ${color}">${typeText}</td>
-                    <td style="padding: 8px; text-align: right;">${h.price.toLocaleString()} KRW</td>
+                    <td style="padding: 8px; text-align: right;">${priceUsdt.toFixed(decimalPlaces)} USDT</td>
                     <td style="padding: 8px; text-align: right;">${h.quantity.toFixed(4)}</td>
                 </tr>
             `;
@@ -822,11 +879,13 @@ async function showRankingModal() {
             else if (r.rank === 2) rankIcon = '🥈 2';
             else if (r.rank === 3) rankIcon = '🥉 3';
             
+            const totalAssetUsdt = r.totalAsset / EXCHANGE_RATE;
+
             html += `
                 <tr style="border-bottom: 1px solid var(--border-color);">
                     <td style="padding: 8px; font-weight: 600; color: #fcd535;">${rankIcon}</td>
                     <td style="padding: 8px;">${r.nickname}</td>
-                    <td style="padding: 8px; text-align: right; font-weight: 600;">${r.totalAsset.toLocaleString()}</td>
+                    <td style="padding: 8px; text-align: right; font-weight: 600;">${totalAssetUsdt.toFixed(2)} USDT</td>
                 </tr>
             `;
         });
@@ -898,32 +957,34 @@ function switchOrderUnit(unit) {
     
     const qtyInput = document.getElementById('tradeQuantity');
     const inputVal = Number(qtyInput.value) || 0;
+    
     const currentPrice = currentStocks[selectedTicker]?.currentPrice || 0;
+    const currentPriceUsdt = currentPrice / EXCHANGE_RATE;
     
     const orderType = document.getElementById('orderTypeSelect').value;
-    let basePrice = currentPrice;
+    let basePriceUsdt = currentPriceUsdt;
     if (orderType === 'LIMIT') {
         const limitInput = document.getElementById('limitPriceInput').value;
-        basePrice = Number(limitInput) || currentPrice;
+        basePriceUsdt = Number(limitInput) || currentPriceUsdt;
     }
 
     if (unit === 'qty') {
         document.getElementById('unitQty').classList.add('active');
         document.getElementById('quantityLabel').innerText = '주문수량 (BTC)';
-        if (basePrice > 0) {
+        if (basePriceUsdt > 0) {
             // 금액 -> 수량 환산: 수량 = (금액 * 레버리지) / 가격
-            const calculatedQty = (inputVal * selectedLeverage) / basePrice;
+            const calculatedQty = (inputVal * selectedLeverage) / basePriceUsdt;
             qtyInput.value = calculatedQty.toFixed(4);
         } else {
             qtyInput.value = '0';
         }
     } else {
         document.getElementById('unitVal').classList.add('active');
-        document.getElementById('quantityLabel').innerText = '주문금액 (KRW)';
-        if (basePrice > 0) {
+        document.getElementById('quantityLabel').innerText = '주문금액 (USDT)';
+        if (basePriceUsdt > 0) {
             // 수량 -> 금액 환산: 금액 = (수량 * 가격) / 레버리지
-            const calculatedVal = (inputVal * basePrice) / selectedLeverage;
-            qtyInput.value = Math.round(calculatedVal);
+            const calculatedVal = (inputVal * basePriceUsdt) / selectedLeverage;
+            qtyInput.value = calculatedVal.toFixed(2);
         } else {
             qtyInput.value = '0';
         }
@@ -970,14 +1031,18 @@ function renderPendingOrders(orders) {
         const typeText = o.positionType === 'LONG' ? '롱 진입 (BUY)' : '숏 진입 (SELL)';
         const date = new Date(o.createdAt).toLocaleString();
 
+        const priceUsdt = o.price / EXCHANGE_RATE;
+        const marginUsdt = o.margin / EXCHANGE_RATE;
+        const decimalPlaces = priceUsdt < 1 ? 4 : 2;
+
         html += `
         <tr>
             <td style="font-weight: 600;">${o.ticker.replace('KRW-', '')}</td>
             <td><span class="position-badge ${badgeClass}">${typeText}</span></td>
             <td style="font-weight: 600; color: var(--binance-yellow);">${o.leverage}x</td>
             <td>${o.quantity.toFixed(4)}</td>
-            <td>${Math.round(o.price).toLocaleString()} KRW</td>
-            <td>${Math.round(o.margin).toLocaleString()} KRW</td>
+            <td>${priceUsdt.toFixed(decimalPlaces)} USDT</td>
+            <td>${marginUsdt.toFixed(2)} USDT</td>
             <td>${date}</td>
             <td>
                 <button class="close-btn" onclick="cancelLimitOrder(${o.id})" style="border-color: #df294a; color: #df294a;">주문 취소</button>
