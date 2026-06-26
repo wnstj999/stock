@@ -14,6 +14,7 @@ public class UserInfoResponse {
     private BigDecimal lockedBalance; 
     private List<PositionDto> holdings;
     private List<com.mock.stock.domain.trade.dto.LimitOrderResponse> pendingOrders; 
+    private boolean aiAgentActive; 
 
 
     @Data

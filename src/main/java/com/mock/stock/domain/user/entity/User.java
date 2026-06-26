@@ -34,6 +34,9 @@ public class User {
     @Column(nullable = false)
     private String role; // 예: ROLE_USER
 
+    @Column(nullable = false)
+    private boolean aiAgentActive = false; // 자율 트레이딩 활성화 여부
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -42,10 +45,15 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String email, String password, String nickname, String role) {
+    public User(String email, String password, String nickname, String role, boolean aiAgentActive) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.role = role;
+        this.aiAgentActive = aiAgentActive;
+    }
+
+    public void toggleAiAgent(boolean active) {
+        this.aiAgentActive = active;
     }
 }

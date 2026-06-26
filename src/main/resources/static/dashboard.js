@@ -55,6 +55,15 @@ async function fetchUserInfo() {
         if (res.ok) {
             const data = await res.json();
             document.getElementById('userNickname').innerText = data.nickname;
+
+            // AI 에이전트 토글 스위치 동기화
+            const aiToggle = document.getElementById('aiAgentToggle');
+            const aiStatusText = document.getElementById('aiAgentStatusText');
+            if (aiToggle && aiStatusText) {
+                aiToggle.checked = data.aiAgentActive;
+                aiStatusText.innerText = data.aiAgentActive ? 'ON' : 'OFF';
+                aiStatusText.style.color = data.aiAgentActive ? 'var(--binance-up)' : 'var(--text-muted)';
+            }
             
             const walletBalance = Number(data.walletBalance);
             const lockedBalance = Number(data.lockedBalance || 0);
@@ -1071,6 +1080,37 @@ async function cancelLimitOrder(orderId) {
         }
     } catch (e) {
         alert('서버 오류가 발생했습니다.');
+    }
+}
+
+async function toggleAiAgentState(checkbox) {
+    const active = checkbox.checked;
+    const statusText = document.getElementById('aiAgentStatusText');
+    if (statusText) {
+        statusText.innerText = active ? 'ON' : 'OFF';
+        statusText.style.color = active ? 'var(--binance-up)' : 'var(--text-muted)';
+    }
+
+    try {
+        const res = await fetchWithAuth(`${API_BASE}/user/ai-agent/toggle`, {
+            method: 'POST',
+            body: JSON.stringify({ active })
+        });
+        if (!res.ok) {
+            alert('AI 에이전트 설정 변경 실패');
+            checkbox.checked = !active;
+            if (statusText) {
+                statusText.innerText = !active ? 'ON' : 'OFF';
+                statusText.style.color = !active ? 'var(--binance-up)' : 'var(--text-muted)';
+            }
+        }
+    } catch (e) {
+        alert('서버 통신 중 장애가 발생했습니다.');
+        checkbox.checked = !active;
+        if (statusText) {
+            statusText.innerText = !active ? 'ON' : 'OFF';
+            statusText.style.color = !active ? 'var(--binance-up)' : 'var(--text-muted)';
+        }
     }
 }
 

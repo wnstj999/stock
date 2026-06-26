@@ -261,9 +261,16 @@
 
             <!-- AI 에이전트 패널 -->
             <div class="ai-section">
-                <div class="ai-header">
+                <div class="ai-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding-right: 8px;">
                     <div class="ai-title-group">
-                        <span class="ai-title">🤖 AI 시장 분석 (OpenAI 연동)</span>
+                        <span class="ai-title">🤖 AI 자율 트레이딩</span>
+                    </div>
+                    <div class="ai-toggle-container" style="display: flex; align-items: center; gap: 6px;">
+                        <span id="aiAgentStatusText" style="font-size: 10px; color: var(--text-muted); font-weight: 600;">OFF</span>
+                        <label class="switch">
+                            <input type="checkbox" id="aiAgentToggle" onchange="toggleAiAgentState(this)">
+                            <span class="slider round"></span>
+                        </label>
                     </div>
                 </div>
                 <div class="ai-content">

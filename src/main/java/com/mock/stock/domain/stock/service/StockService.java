@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.redis.core.RedisTemplate;
 import java.util.List;
 
 @Service
@@ -22,6 +23,7 @@ public class StockService {
     private final PositionRepository positionRepository;
     private final LimitOrderRepository limitOrderRepository;
     private final TradeHistoryRepository tradeHistoryRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @PostConstruct
     @Transactional
@@ -45,6 +47,22 @@ public class StockService {
 
     @Transactional(readOnly = true)
     public List<Stock> getAllStocks() {
+        try {
+            // 1. 레디스 캐시에서 전체 시세 조회
+            Object cachedStocks = redisTemplate.opsForValue().get("stocks:all");
+            if (cachedStocks instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Stock> stockList = (List<Stock>) cachedStocks;
+                if (!stockList.isEmpty()) {
+                    return stockList;
+                }
+            }
+        } catch (Exception e) {
+            // 레디스 서버 장애 발생 시 안전하게 로그만 남기고 데이터베이스 폴백 수행
+            log.error("레디스 캐시 조회 실패, 마이에스큐엘 데이터베이스로 폴백 진행: {}", e.getMessage());
+        }
+
+        // 2. 레디스 캐시 미적용 또는 에러 시 마이에스큐엘에서 직접 조회
         return stockRepository.findAll();
     }
 }

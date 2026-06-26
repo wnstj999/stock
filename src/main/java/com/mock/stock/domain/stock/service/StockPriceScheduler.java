@@ -6,6 +6,7 @@ import com.mock.stock.domain.stock.repository.StockRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 public class StockPriceScheduler {
 
     private final StockRepository stockRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Data
@@ -60,6 +62,13 @@ public class StockPriceScheduler {
                         Long newPrevClose = tickerData.getPrevClosingPrice().longValue();
                         stock.updatePrice(newPrice, newPrevClose);
                     }
+                }
+
+                // 업비트 가격 갱신 성공 시 레디스 캐시 최신 데이터로 동기화
+                try {
+                    redisTemplate.opsForValue().set("stocks:all", stocks);
+                } catch (Exception re) {
+                    log.error("레디스 시세 캐시 동기화 실패: {}", re.getMessage());
                 }
             }
         } catch (Exception e) {
